@@ -2,11 +2,21 @@
 
 ![WindLab](https://github.com/jdlr01/WindLab/WindLab_logo.svg)
 
-## Welcome to PyWake
-- an AEP calculator for wind farms implemented in Python including a collection of wake models
+## Welcome to WindLab
+- an API for exploring, reading and writing to the WindLab data and knowledge hub
 
 
-This is a work-in-progress attempt to make something like FUSEDWAKE 2.0. Its relation to FUSEDWAKE is, however, not determined yet.
+This is a work-in-progress attempt originating from the three following European funded projects:
+- AIRE: (https://aire-project.eu/)
+- Meridional: (https://meridional.eu/)
+- FLOW: (https://flow-horizon.eu/)
+
+
+
+
+
+
+ to make something like FUSEDWAKE 2.0. Its relation to FUSEDWAKE is, however, not determined yet.
 The idea is that it should:
 
 - Reduce duplicated code
