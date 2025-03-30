@@ -7,77 +7,28 @@
 
 
 This is a work-in-progress attempt originating from the three following European funded projects:
-- AIRE: (https://aire-project.eu/)
-- Meridional: (https://meridional.eu/)
-- FLOW: (https://flow-horizon.eu/)
+- AIRE: Aire project works to improve efficiency of the wind energy sector by studying wind flows at different altitudes and weather conditions, providing better design, durability and performance of the wind turbines and farms. Funded under HORIZON-CL5-2021-D3-03 programme (https://aire-project.eu/)
+- Meridional: MERIDIONAL provides a comprehensively validated toolchain based on an open source Platform, which draws on an integrated knowledge and data hub to allow the efficient and accurate assessment of the performance and loads experienced by onshore, offshore, and airborne wind energy system. Funded under HORIZON-101084216 (https://meridional.eu/)
+- FLOW: FLOW is developing new and innovative prediction methods for production statistics and load performance of modern offshore and onshore wind energy systems. Funded under the HORIZON- (https://flow-horizon.eu/)
 
 
 
 
 
+## Source code repository (and issue tracker):
 
- to make something like FUSEDWAKE 2.0. Its relation to FUSEDWAKE is, however, not determined yet.
-The idea is that it should:
-
-- Reduce duplicated code
-- Include wakemap functions
-- Be faster
-- Be suitable for layout optimization
-- Support use of load surrrogate models
-- Support complex terrain
-- Support gradient based optimization
+[https://github.com/jdlr01/WindLab](https://github.com/jdlr01/WindLab)
 
 
 ## Quick Start:
 
-`pip install py_wake`
-
-## Source code repository (and issue tracker):
-
-[https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake)
+`pip install -r requirements.txt`
 
 ## License:
-[MIT](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/blob/master/LICENSE)
+[???]()
 
 ## Documentation, installation, etc:
 
-[https://topfarm.pages.windenergy.dtu.dk/PyWake](https://topfarm.pages.windenergy.dtu.dk/PyWake).
-
-
-
-[![License](https://img.shields.io/pypi/l/py_wake)](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/blob/master/LICENSE)
-
-![PyWake](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/raw/master/docs/logo.svg)
-
-## Welcome to PyWake
-- an AEP calculator for wind farms implemented in Python including a collection of wake models
-
-
-This is a work-in-progress attempt to make something like FUSEDWAKE 2.0. Its relation to FUSEDWAKE is, however, not determined yet.
-The idea is that it should:
-
-- Reduce duplicated code
-- Include wakemap functions
-- Be faster
-- Be suitable for layout optimization
-- Support use of load surrrogate models
-- Support complex terrain
-- Support gradient based optimization
-
-
-## Quick Start:
-
-`pip install py_wake`
-
-## Source code repository (and issue tracker):
-
-[https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake)
-
-## License:
-[MIT](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/blob/master/LICENSE)
-
-## Documentation, installation, etc:
-
-[https://topfarm.pages.windenergy.dtu.dk/PyWake](https://topfarm.pages.windenergy.dtu.dk/PyWake).
+[https://github.com/jdlr01/WindLab](https://github.com/jdlr01/WindLab).
 
 
