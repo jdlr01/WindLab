@@ -26,6 +26,7 @@ This is a work-in-progress attempt originating from the three following European
 
 
 ## Example:
+Get all data sets from the WindLab and display their names and ID's on screen.
 
 ```
 ckan_url = "https://windlab.hlrs.de" 

@@ -515,7 +515,7 @@ def read_yaml(dir_file_name=None,
                verbose = False,
                error = True):
     # Getting some default information for WindLab
-    windlab_yaml, ckan_url, api_token, verbose, errorVal = \
+    ckan_url, api_token, verbose, errorVal = \
     read_access(dir_file_name = 'default.yml', 
                 verbose = verbose,
                 error = error)
@@ -530,7 +530,7 @@ def read_yaml(dir_file_name=None,
                 windlab_temp.append([yaml.safe_load(file)])
         windlab_data = windlab_temp[0]
 
-    return windlab_yaml, ckan_url, api_token, windlab_data, verbose, errorVal
+    return ckan_url, api_token, windlab_data, verbose, errorVal
 
 
 def read_json(dir_file_name=None, 
@@ -540,7 +540,7 @@ def read_json(dir_file_name=None,
                error = True):
     
     # Getting some default information for WindLab
-    windlab_yaml, ckan_url, api_token, verbose, errorVal = \
+    ckan_url, api_token, verbose, errorVal = \
     read_access(dir_file_name = 'default.yml', 
                 verbose = verbose,
                 error = error)
@@ -548,7 +548,7 @@ def read_json(dir_file_name=None,
     with open(dir_file_name, 'r') as file:
         windlab_data = json.safe_load(file)
     
-    return windlab_yaml, ckan_url, api_token, windlab_data, verbose, errorVal
+    return ckan_url, api_token, windlab_data, verbose, errorVal
 
     
 def read_txt(dir_file_name=None, 
@@ -579,7 +579,7 @@ def read_txt(dir_file_name=None,
     """
     try:
         # Getting some default information for WindLab
-        windlab_yaml, ckan_url, api_token, verbose, errorVal = \
+        ckan_url, api_token, verbose, errorVal = \
         read_access(dir_file_name = 'default.yml', 
                     verbose = verbose,
                     error = error)
@@ -631,7 +631,7 @@ def read_txt(dir_file_name=None,
         windlab_data['resource_description']        = get_line(text_cont, '- **resource description**:')
         windlab_data['resource_schema_name']        = get_line(text_cont, '- **resource schema name**:')
 
-        return windlab_yaml, ckan_url, api_token, windlab_data, verbose, errorVal
+        return ckan_url, api_token, windlab_data, verbose, errorVal
     
     except Exception  as err:
         if error:
@@ -688,7 +688,7 @@ def read_access(dir_file_name=None,
         verbose = windlab_yaml['API']['verbose']
         errorVal = windlab_yaml['API']['error']
         
-        return windlab_yaml, ckan_url, api_token, verbose, errorVal
+        return ckan_url, api_token, verbose, errorVal
     except Exception  as err:
         if error:
             raise ValueError('ERROR: read_access: with error message:', err)
@@ -750,7 +750,7 @@ def read_setup(dir_file_name=None,
                     windlab_data = windlab_yaml[section_name]
             
         
-        return windlab_yaml, ckan_url, api_token, windlab_data, verbose, errorVal
+        return ckan_url, api_token, windlab_data, verbose, errorVal
     except Exception  as err:
         if error:
             raise ValueError('ERROR: read_setup: with error message:', err)
@@ -1286,14 +1286,14 @@ if __name__ == '__main__':
     # get Organization ID from CKAN data base
     # get info from setup file
     if 1 == 1:
-        windlab_yaml, ckan_url, api_token, organization, verbose, error = \
+        ckan_url, api_token, organization, verbose, error = \
             read_setup(dir_file_name=dir_name + 'windlab_get_org_id.yml',
                        section_name = 'org')
         res = get_org_id_from_name(ckan_url, api_token, organization['org_disp_name'])
     
     # get copy right id
     if 1 == 0:
-        windlab_yaml, ckan_url, api_token, cc, verbose, error = \
+        ckan_url, api_token, cc, verbose, error = \
             read_setup(dir_file_name=dir_name + 'windlab_get_cc_id.yml',
                        section_name = 'license')
         res = get_cc_id_from_name(ckan_url, api_token, cc['license_disp_name'])

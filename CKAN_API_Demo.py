@@ -7,13 +7,13 @@ import yaml
 dir_name = './setup_files/WindDemo/'
 
 # Get URL for API and other access information from file
-windlab_yaml, ckan_url, api_token, windlab_data, verbose, errorVal = \
-        CK_helper.read_setup(dir_file_name = 'default.yml')
+ckan_url, api_token, windlab_data, verbose, errorVal = \
+    CK_helper.read_setup(dir_file_name = 'default.yml')
 
 
 
 ## Get list of all organisations
-if 1 == 0:
+if 1 == 1:
     print('========================')
     print('Org names')
     print('========================')
@@ -61,7 +61,7 @@ if 1 == 0:
 
 
 ## Delete Data Set
-if 1 == 1:
+if 1 == 0:
     print('========================')
     print('Delete Data set')
     print('========================')
@@ -83,10 +83,10 @@ if 1 == 0:
     #   file ''Delete_DataSets_using_ID.yml''
     #
     # Then execute the following;
-    ret = CK_Calls.delete_datasets(windlab_yaml=windlab_yaml, 
-                          ckan_url='https://windlab.hlrs.de', 
-                          api_token='aa3a5e4b-097c-4f59-b5c3-1874c8bbc8e2', 
-                          windlab_data=windlab_data, 
+    data_set_id = "19868f99-80dc-41d0-956c-abb53f8fb150"
+    ret = CK_Calls.delete_datasets(ckan_url     = 'https://windlab.hlrs.de', 
+                                    api_token   = None, 
+                                    windlab_data= {'data': {'data_set_id':data_set_id}}, 
                           )
 
 
