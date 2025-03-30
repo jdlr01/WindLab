@@ -1,4 +1,4 @@
-[![License](https://img.shields.io/pypi/l/py_wake)](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/blob/master/LICENSE)
+[![License](??)](??)
 
 ![WindLab](https://github.com/jdlr01/WindLab/blob/main/WindLab_logo.svg)
 
