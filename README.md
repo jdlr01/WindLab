@@ -33,9 +33,7 @@ This is a work-in-progress attempt originating from the three following European
 
 `    for ii in range(len(dataset_title)):
 	
-        print(str(ii) + ': ' , dataset_title[ii] + ': ' +  dataset_ids[ii]) 
-		
-    print(' ')`
+        print(str(ii) + ": " , dataset_title[ii] + ": " +  dataset_ids[ii]) `
 	
 	
 ## License:
