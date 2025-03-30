@@ -32,6 +32,7 @@ This is a work-in-progress attempt originating from the three following European
 `dataset_ids, dataset_title = CK_helper.get_dataset_all_id(ckan_url)`
 
 `for ii in range(len(dataset_title)):
+
 print(str(ii) + ": " , dataset_title[ii] + ": " +  dataset_ids[ii]) `
 	
 	
