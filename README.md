@@ -1,6 +1,6 @@
 [![License](https://img.shields.io/pypi/l/py_wake)](https://gitlab.windenergy.dtu.dk/TOPFARM/PyWake/blob/master/LICENSE)
 
-![WindLab](https://github.com/jdlr01/WindLab/WindLab_logo.svg)
+![WindLab](https://github.com/jdlr01/WindLab/main/WindLab_logo.svg)
 
 ## Welcome to PyWake
 - an AEP calculator for wind farms implemented in Python including a collection of wake models
