@@ -23,6 +23,18 @@ if 1 == 0:
 
 
 ## Get List of all data sets names with IDs
+if 1 == 1:
+    print('========================')
+    print('Data set names with IDs')
+    print('========================')
+    dataset_ids, dataset_title = CK_helper.get_dataset_all_id(ckan_url, api_token)
+    for ii in range(len(dataset_title)):
+        print(str(ii) + ': ' , dataset_title[ii] + ': ' +  dataset_ids[ii]) 
+    print(' ')
+
+
+
+## Get List of all data sets names with IDs
 if 1 == 0:
     print('========================')
     print('Writing test data with Link')
@@ -49,7 +61,7 @@ if 1 == 0:
 
 
 ## Delete Data Set
-if 1 == 0:
+if 1 == 1:
     print('========================')
     print('Delete Data set')
     print('========================')
@@ -60,6 +72,22 @@ if 1 == 0:
     #
     # Then execute the following;
     res = CK_Calls.delete_datasets_via_file(dir_name + 'Delete_DataSets_using_ID.yml')
+
+if 1 == 0:
+    print('========================')
+    print('Delete Data set through ID ')
+    print('========================')
+    # There is an options to delete a data set from the WindLab
+    # Using Data Set ID:
+    #   Find unique ID using above ''Data set names with IDs'' and place ID in 
+    #   file ''Delete_DataSets_using_ID.yml''
+    #
+    # Then execute the following;
+    ret = CK_Calls.delete_datasets(windlab_yaml=windlab_yaml, 
+                          ckan_url='https://windlab.hlrs.de', 
+                          api_token='aa3a5e4b-097c-4f59-b5c3-1874c8bbc8e2', 
+                          windlab_data=windlab_data, 
+                          )
 
 
 
@@ -72,7 +100,7 @@ if 1 == 0:
     print('found ', len(res), ' data entries')
     print(res[0])
 
-if 1 == 1:
+if 1 == 0:
     print('========================')
     print('Loading Meta Data with Data into Memory')
     print('========================')
@@ -103,18 +131,6 @@ if 1 == 0:
         print('+++++++++++++++++++++++++++++')
 
 
-
-
-
-## Get List of all data sets names with IDs
-if 1 == 0:
-    print('========================')
-    print('Data set names with IDs')
-    print('========================')
-    dataset_ids, dataset_title = CK_helper.get_dataset_all_id(ckan_url, api_token)
-    for ii in range(len(dataset_title)):
-        print(str(ii) + ': ' , dataset_title[ii] + ': ' +  dataset_ids[ii]) 
-    print(' ')
 
 
 

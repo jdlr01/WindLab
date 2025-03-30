@@ -170,7 +170,7 @@ def delete_datasets_via_file(dir_file_name=None):
     #windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
     #    CK_helper.read_setup(dir_file_name=dir_file_name, 
     #                         process_name='delete_dataset')
-
+    print(windlab_data)
     ret = delete_datasets(windlab_yaml=windlab_yaml, 
                           ckan_url=ckan_url, 
                           api_token=api_token, 
