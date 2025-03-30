@@ -1,0 +1,33 @@
+# General required fields
+general_requ:
+    title: 'Dietrichs Test File WindIO conform'
+    description: 'Test File WindIO conform'
+    subject: ['Wind Farm', 'Wind Farm Control']
+    copy_right_license_name: 'cc-zero'
+    org_name: 'DTU'
+    group: 'FLOW'
+    private: False
+    identifier: None
+    version: 1.0
+    author: 'J. Dietrich' 
+    maintainer: 'J. Dietrich' 
+    maintainer_email: 'jan.dietrich@iwes.fraunhofer.de'
+
+# General optional fields
+general_opt:
+    funder: 'eu'
+    schema_compliance: 'windIO'
+
+
+# Optional resource field
+resource_opt:
+
+
+
+# Resources
+resources:
+    - resource_title: 'Test File'
+      resource_source: '.\test_data\turbine.yaml'
+      resource_description: 'data stored in DTU GitLAb'
+      resource_format: 'yaml'
+      resource_schema_name: 'turbine'

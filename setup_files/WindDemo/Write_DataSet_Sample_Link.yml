@@ -1,0 +1,32 @@
+# General required fields
+general_requ:
+    title: 'Jan-s Test'
+    description: 'data stored in DTU GitLAb'
+    subject: ['Wind Farm', 'Wind Farm Control']
+    copy_right_license_name: 'cc-zero'
+    org_name: 'DTU'
+    group: 'FLOW'
+    private: False
+    identifier: 'https://gitlab.windenergy.dtu.dk/eu-flow/wp4/FLOW_API/-/tree/main/examples/cases/open_source_scada'
+    version: 1.0
+    author: 'J. Diettrich' 
+    maintainer: 'J. Diettrich' 
+    maintainer_email: 'jan.diettrich@iwes.fraunhofer.de'
+
+# General optional fields
+general_opt:
+    funder: 'eu'
+
+
+# Optional resource field
+resource_opt:
+
+
+
+# Resources
+resources:
+    - resource_title: 'SCADA data link 1'
+      resource_source: '.\test_data\turbine.yaml'
+      resource_description: 'data stored in DTU GitLAb'
+      resource_format: 'url'
+      resource_url: 'https://gitlab.windenergy.dtu.dk/eu-flow/wp4/FLOW_API/-/tree/main/examples/cases/open_source_scada'

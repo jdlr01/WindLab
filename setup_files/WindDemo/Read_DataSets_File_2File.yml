@@ -1,0 +1,6 @@
+data:
+    - data:
+        tag_strings : ['J. Diettrich']
+        resource_type : 'file'
+        write_to_file : True
+        dir_name : '..\temp'
