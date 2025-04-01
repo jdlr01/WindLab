@@ -1,6 +1,6 @@
 data:
     - data:
-        tag_strings : ['J. Diettrich']
-        resource_type : 'file'
+        tag_strings : ['Florian Stappenbeck (Bauer)']
+        resource_type : 'link'
         write_to_file : True
         dir_name : '..\temp'

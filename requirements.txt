@@ -13,3 +13,6 @@ urllib3==2.2.3
 pyyaml
 jsonschema
 xarray
+zipfile
+netcdf4
+h5netcdf

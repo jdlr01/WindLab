@@ -8,12 +8,15 @@ import os
 import json  
 import copy
 import sys
+import zipfile
+from netCDF4 import Dataset
+
  
 from jsonschema import ValidationError
 from yml_utils import validate_yaml
+import yml_utils
 #from windIO.yml_utils import validate_yaml
 #from windIO.yml_utils import validate_yaml
-
 
 # from yaml import load, dump
 # from jsonschema import validate
@@ -23,7 +26,7 @@ from yml_utils import validate_yaml
 # from yamlinclude import YamlIncludeConstructor
 
 data_format_list    = ['txt', 'csv', 'netcdf', 'pdf', 'yaml']
-general_requ_list   = ['title', 'description', 'subject', 'copy_right_license_name', 
+general_requ_list   = ['title', 'notes', 'subject', 'copy_right_license_name', 
                      'org_name', 'group', 'private', 'identifier', 'version', 'author', 
                      'maintainer','maintainer_email']
 general_opt_list    = ['funder', 'geographic_location', 'related_item', 'resource_type', 
@@ -150,7 +153,11 @@ def read_resource(ckan,
                 # Step 4: removing file
                 os.remove(resource_file_name)
             else:
-                data = resource_file_name
+
+                # Open a .nc file ("file_name")
+                data = Dataset(resource_file_name)
+                print(data)
+                #data = resource_file_name
 
             return data
 
@@ -170,8 +177,12 @@ def read_resource(ckan,
 
             else:
                 # get data as is
-                data = respo.content.decode("utf-8")
-                data = yaml.safe_load(data)
+                #data = respo.content.decode("utf-8")
+                #data = yaml.safe_load(data)
+                resource_file_name = resource_file_name.replace('\\', '/')
+                with open(resource_file_name, 'r') as file:
+                    windlab_yaml = yaml.safe_load(file)
+                print(data)
 
                 # yaml.safe_load(respo.content)
 
@@ -225,7 +236,8 @@ def read_resource(ckan,
             if verbose:
                 print("The resource is not a CSV, netCDF nor YAML file.")
 
-    except:
+    except Exception as e:
+        print('Exception ', e)
         if error:
             raise ValueError('Not dataset_id')
         else:
@@ -302,7 +314,7 @@ def check_meta_data(thisdata_in,
                 if isinstance(thisdata['general_requ'][general_requ_list[ii]], general_requ_list_type[ii]):
                     pass
                 else:
-                    print('Error: In general_requ: Type of ' + general_requ_list[ii] + ' not correct. Needs to be ' + str(general_requ_list_type[ii]))
+                    print('Error: In general_requ: Type of "' + general_requ_list[ii] + '" not correct. Needs to be ' + str(general_requ_list_type[ii]))
                     sys.exit()
             else:
                 print('Error: In general_requ: No key found for ' + general_requ_list[ii])
@@ -362,7 +374,13 @@ def check_meta_data(thisdata_in,
                 for ii in range(len(resources_list)):
                     if resources_list[ii] in theEntry:
                         if isinstance(theEntry[resources_list[ii]], resources_list_type[ii]):
-                            pass
+                            if os.path.isfile(theEntry['resource_source']):
+                                if verbose: print('Resource "', theEntry['resource_source'] ,'" exists. Pass.')
+                                pass
+                            else:
+                                print('Resource "', theEntry['resource_source'], '" could not be found.')
+                                sys.exit
+
                         elif theEntry[resources_list[ii]] == None:
                             pass
                         else:
@@ -509,14 +527,51 @@ def is_name_in_use(ckan_url,
         return False
     
 
-def read_yaml(dir_file_name=None, 
-               section_name='data', 
-               process_name='',
-               verbose = False,
-               error = True):
+def read_yaml(access_dir_file_name  = 'default.yml',
+                dir_file_name       = None, 
+                section_name        = 'data', 
+                process_name        = '',
+                verbose             = False,
+                error               = True):
+    """
+    Reads in the required meta data through a yaml file, 
+    and returns the information as a dict.
+
+    Parameters
+    ----------
+    access_dir_file_name : String, optional
+        Dir and file name of the yaml file containing URL, access-token, and other settings.
+    dir_file_name : String, optional
+        File and path name of the yaml file. Abs path name needed. 
+        The default is None.
+    section_name : string, default 'data' 
+        Reads in the information from section section_name
+    process_name : String, optional
+        Name of the proces, that was trying to read the yaml file. 
+        The default is ''.
+    verbose : Boolean, default False
+        Boolean for display of messages to screen
+    error : Boolean, default False
+        Boolean for displaying caught error messages
+
+    Returns
+    -------
+    ckan_url: String
+        containing the URL of the WindLab
+    api_token : String
+        Containing the access key if given
+    windlab_data
+        Content of the yaml file.
+    verbose : boolean
+        Boolean to throw errors or not
+    errorVal : boolean
+        Boolean to write further information to screen
+    """
+
+    
     # Getting some default information for WindLab
     ckan_url, api_token, verbose, errorVal = \
-    read_access(dir_file_name = 'default.yml', 
+    read_access(dir_file_name = access_dir_file_name, 
                 verbose = verbose,
                 error = error)
     
@@ -526,22 +581,62 @@ def read_yaml(dir_file_name=None,
     if 'file' in windlab_data['data']:
         windlab_temp = []
         for file_name in windlab_data['data']['file']: 
-            with open(file_name, 'r') as file:
-                windlab_temp.append([yaml.safe_load(file)])
+            if file_name[-4:] == '.zip':
+                windlab_temp.append([get_meta_from_zip(file_name)])
+            else:
+                with open(file_name, 'r') as file:
+                    windlab_temp.append([yaml.safe_load(file)])
+
         windlab_data = windlab_temp[0]
 
     return ckan_url, api_token, windlab_data, verbose, errorVal
 
 
-def read_json(dir_file_name=None, 
-               section_name='data', 
-               process_name='',
-               verbose = False,
-               error = True):
+def read_json(access_dir_file_name = 'default.yml',
+                dir_file_name       = None, 
+                section_name        = 'data', 
+                process_name        = '',
+                verbose             = False,
+                error               = True):
     
+    """
+    Reads in the required meta data through a json file, 
+    and returns the information as a dict.
+
+    Parameters
+    ----------
+    access_dir_file_name : String, optional
+        Dir and file name of the yaml file containing URL, access-token, and other settings.
+    dir_file_name : String, optional
+        File and path name of the yaml file. Abs path name needed. 
+        The default is None.
+    section_name : string, default 'data' 
+        Reads in the information from section section_name
+    process_name : String, optional
+        Name of the proces, that was trying to read the yaml file. 
+        The default is ''.
+    verbose : Boolean, default False
+        Boolean for display of messages to screen
+    error : Boolean, default False
+        Boolean for displaying caught error messages
+
+    Returns
+    -------
+    ckan_url: String
+        containing the URL of the WindLab
+    api_token : String
+        Containing the access key if given
+    windlab_data
+        Content of the yaml file.
+    verbose : boolean
+        Boolean to throw errors or not
+    errorVal : boolean
+        Boolean to write further information to screen
+    """
+
     # Getting some default information for WindLab
     ckan_url, api_token, verbose, errorVal = \
-    read_access(dir_file_name = 'default.yml', 
+    read_access(dir_file_name = access_dir_file_name, 
                 verbose = verbose,
                 error = error)
     
@@ -551,16 +646,44 @@ def read_json(dir_file_name=None,
     return ckan_url, api_token, windlab_data, verbose, errorVal
 
     
-def read_txt(dir_file_name=None, 
-               section_name='data', 
-               process_name='',
-               verbose = False,
-               error = True):
+
+def get_meta_from_zip(dir_file_name = None, 
+                      verbose       = False, 
+                      error         = True):
+    """
+    Returns meta data from zip file. 
+    REQUIREMENT: Meta data file name needs to have name of "WindLab_meta.yaml".
+
+    """
+    windlab_data = None
+    if os.path.isfile(dir_file_name):
+        archive = zipfile.ZipFile(dir_file_name, 'r')
+        dir_name = os.path.basename(dir_file_name)
+        dir_name = dir_name[:-4]
+        windlab_data = archive.read(dir_name + '/WindLab_meta.yaml')
+        windlab_data = yaml.safe_load(windlab_data)
+
+        print(windlab_data)
+    else:
+        if error: print('ERROR: get_meta_from_zip(): zip file not found.')
+        return None
+
+    return windlab_data
+
+
+def read_txt(access_dir_file_name   = 'default.yml',
+                dir_file_name       = None, 
+                section_name        = 'data', 
+                process_name        = '',
+                verbose             = False,
+                error               = True):
     """
     Reads in the ReadMe.md file, and generates the required dics instead of a yaml file.
 
     Parameters
     ----------
+    access_dir_file_name : String, optional
+        Dir and file name of the yaml file containing URL, access-token, and other settings.
     dir_file_name : String, optional
         File and path name of the yaml file. Abs path name needed. 
         The default is None.
@@ -574,13 +697,21 @@ def read_txt(dir_file_name=None,
 
     Returns
     -------
-    Dict
+    ckan_url: String
+        containing the URL of the WindLab
+    api_token : String
+        Containing the access key if given
+    windlab_data
         Content of the yaml file.
+    verbose : boolean
+        Boolean to throw errors or not
+    errorVal : boolean
+        Boolean to write further information to screen
     """
     try:
         # Getting some default information for WindLab
         ckan_url, api_token, verbose, errorVal = \
-        read_access(dir_file_name = 'default.yml', 
+        read_access(dir_file_name = access_dir_file_name, 
                     verbose = verbose,
                     error = error)
         
@@ -698,11 +829,11 @@ def read_access(dir_file_name=None,
             return None
 
 
-def read_setup(dir_file_name=None, 
-               section_name='data', 
-               process_name='',
-               verbose = False,
-               error = True):
+def read_setup(dir_file_name= None, 
+               section_name = 'data', 
+               process_name = '',
+               verbose      = False,
+               error        = True):
     """
     Reads in the yaml setup file
 
@@ -811,7 +942,8 @@ def get_org_id_from_name(ckan_url,
         string containing the ID of the organization.
 
     """
-    
+    if verbose: print('    Entered "get_org_id_from_name"')
+
     org_id = None
     # Connect to the CKAN instance
     ckan = RemoteCKAN(ckan_url)
@@ -829,14 +961,15 @@ def get_org_id_from_name(ckan_url,
                 print('ERROR: get_org_id_from_name(): Not able to get list of all organizations from WindLab')
             org_id = None
             return org_id
-        
-            
+
     try:
         for org in entries_list :
             this_name = org['display_name'].lower()
             this_org_id = org['id']
             if this_name == org_disp_name.lower():
                 org_id = this_org_id
+                if verbose: print('    Finished "get_org_id_from_name"')
+
                 return org_id
     except:
         if error:
@@ -851,7 +984,9 @@ def get_org_id_from_name(ckan_url,
         print('Options are:')
         for org in entries_list :
             print(org['display_name'].lower())
+
     raise ValueError(Error_Mess)
+    if verbose: print('    Finished "get_org_id_from_name"')
     return org_id
         
 
@@ -1034,11 +1169,15 @@ def load_yaml(file_path):
         Content of the yaml file.
 
     """
+
     with open(file_path, 'r') as file:
         try:
             return yaml.safe_load(file)
         except yaml.YAMLError as exc:
-            raise Exception(f"Error parsing YAML file: {exc}")
+            try:
+                return yml_utils.load_yaml(file)
+            except: 
+                raise Exception(f"Error parsing YAML file: {exc}")
             
     
 def validate_yaml_with_schema(yaml_file_path, 
@@ -1070,13 +1209,32 @@ def validate_yaml_with_schema(yaml_file_path,
     """
     try:
         #2 Loading the yaml data
-        yaml_data = load_yaml(yaml_file_path)
-        # Validating the yaml data
-        validate_yaml(
-            data_file   = yaml_data, 
-            schema_file = 'schemas/' + resource_schema_type + '/' + resource_schema_name + '.yaml'
-        )
-        return True
+        if os.path.exists(yaml_file_path):
+            if verbose: print('File "', yaml_file_path, '" found')
+        else:
+            if verbose: print('File "', yaml_file_path, '" NOT found.')
+            return False
+        if 1 == 0:
+            yaml_data = load_yaml(yaml_file_path)
+            # Validating the yaml data
+            validate_yaml(
+                data_file   = yaml_data, 
+                schema_file = 'schemas/' + resource_schema_type + '/' + resource_schema_name + '.yaml'
+            )
+            return True
+        if 1 == 1:
+            
+            try:
+                validate_yaml(
+                    data_file   = yaml_file_path, 
+                    schema_file = 'schemas/' + resource_schema_type + '/' + resource_schema_name + '.yaml'
+                )
+            except:
+                print('ERROR: File ', yaml_file_path, ' could not be validated.')
+                sys.exit
+
+            return True
+
     
     except:
         if error:
@@ -1115,6 +1273,7 @@ def check_schema(this_res,
     """
     
     # Check data schema against data if requested
+    if verbose: print('     Entered "check_schema()"')
     try:
         if resource_schema_type is not None:
             if this_res['resource_format'].lower() in data_format_list:
@@ -1142,6 +1301,7 @@ def check_schema(this_res,
             this_res['resource_schema_type'] = None
 
         
+        if verbose: print('     Finished "check_schema()"')
         return this_res
     except:
         if error:

@@ -7,7 +7,8 @@ import yaml  # needs pyyaml
 data_format_list = ['txt', 'csv', 'netcdf']
 
 
-def write_datasets_via_file(dir_file_name=None):
+def write_datasets_via_file(access_dir_file_name= 'default.yml', 
+                            dir_file_name       = None):
     """
     Function to push data, specified through a yaml file, into a ckan database
     
@@ -27,20 +28,23 @@ def write_datasets_via_file(dir_file_name=None):
     # get info from setup file
     if len(dir_file_name)>4:
         if dir_file_name[-4:] == '.yml':
-            windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
-                CK_helper.read_yaml(dir_file_name=dir_file_name, 
-                                    process_name='write_datasets')
+            ckan_url, api_token, windlab_data, verbose, error = \
+                CK_helper.read_yaml(access_dir_file_name= access_dir_file_name,
+                                    dir_file_name       = dir_file_name, 
+                                    process_name        = 'write_datasets')
             
         elif dir_file_name[-5:] == '.json':
-            windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
-                CK_helper.read_json(dir_file_name=dir_file_name, 
-                                    process_name='write_datasets')
+            ckan_url, api_token, windlab_data, verbose, error = \
+                CK_helper.read_json(access_dir_file_name= access_dir_file_name,
+                                    dir_file_name       = dir_file_name, 
+                                    process_name        = 'write_datasets')
             
         else:
             # Get info on WindLap
-            windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
-                CK_helper.read_txt(dir_file_name=dir_file_name, 
-                                    process_name='write_datasets')
+            ckan_url, api_token, windlab_data, verbose, error = \
+                CK_helper.read_txt(access_dir_file_name = access_dir_file_name,
+                                   dir_file_name        = dir_file_name, 
+                                    process_name        = 'write_datasets')
         
         # Checking data data
         windlab_data = CK_helper.check_meta_data(windlab_data, 
@@ -52,8 +56,7 @@ def write_datasets_via_file(dir_file_name=None):
         return False
 
 
-    ret = write_datasets(windlab_yaml=windlab_yaml,
-                            ckan_url=ckan_url,
+    ret = write_datasets(ckan_url=ckan_url,
                             api_token=api_token,
                             windlab_data=windlab_data,
                             verbose=verbose,
@@ -61,8 +64,7 @@ def write_datasets_via_file(dir_file_name=None):
     return ret
 
 
-def write_datasets(windlab_yaml, 
-                   ckan_url, 
+def write_datasets(ckan_url, 
                    api_token, 
                    windlab_data, 
                    verbose=False, 
@@ -72,8 +74,6 @@ def write_datasets(windlab_yaml,
     
     Parameters
     ----------
-    windlab_yaml : dict 
-        Content of the entire yaml file.
     ckan_url : String
         URL of WindLab or other CKAn installation
     api_token : String
@@ -91,6 +91,7 @@ def write_datasets(windlab_yaml,
         Boolean if process worked (True) or failed (False)
 
     """
+    if verbose: print('    Entered "write_datasets()"')
     # Dataset metadata to be uploaded to CKAN
     success_list = []
     for thisdata in windlab_data:
@@ -108,6 +109,18 @@ def write_datasets(windlab_yaml,
                                                 org_disp_name = org_disp_name, 
                                                 verbose = verbose,
                                                 error   = error)
+        # check resources on scheema 
+        if verbose: print('         "check_schema()"')
+
+        for this_res in thisdata['resources']:
+            # Cehcking resource on schema if requested.
+            if verbose: print('++++++++++++++++++')
+            if verbose: print(this_res)
+            this_res = CK_helper.check_schema(this_res              = this_res,
+                                                resource_schema_type  = schema_type,
+                                                verbose               = verbose,
+                                                error                 = error)
+
         # Creating a package/entry to ckan 
         dataset_id = CK_helper.setup_dataset(ckan_url   = ckan_url,
                                              api_token  = api_token,
@@ -117,6 +130,8 @@ def write_datasets(windlab_yaml,
                                              error      = error)
         if len(dataset_id) > 0:
             # dumpng the data
+            print('++++++++++++++++++')
+            print('++++++++++++++++++')
             for this_res in thisdata['resources']:
                 # Cehcking resource on schema if requested.
                 this_res = CK_helper.check_schema(this_res=this_res,
@@ -159,7 +174,7 @@ def delete_datasets_via_file(dir_file_name=None):
 
     """
     # get ULR for API
-    windlab_yaml, ckan_url, api_token, verbose, error = \
+    ckan_url, api_token, verbose, error = \
         CK_helper.read_access(dir_file_name = 'default.yml')
     
     # get info from setup file
@@ -167,12 +182,11 @@ def delete_datasets_via_file(dir_file_name=None):
         windlab_data = yaml.safe_load(file)
 
 
-    #windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
+    #ckan_url, api_token, windlab_data, verbose, error = \
     #    CK_helper.read_setup(dir_file_name=dir_file_name, 
     #                         process_name='delete_dataset')
     print(windlab_data)
-    ret = delete_datasets(windlab_yaml=windlab_yaml, 
-                          ckan_url=ckan_url, 
+    ret = delete_datasets(ckan_url=ckan_url, 
                           api_token=api_token, 
                           windlab_data=windlab_data, 
                           verbose=verbose,
@@ -180,8 +194,7 @@ def delete_datasets_via_file(dir_file_name=None):
     return ret
 
 
-def delete_datasets(windlab_yaml, 
-                    ckan_url, 
+def delete_datasets(ckan_url, 
                     api_token, 
                     windlab_data, 
                     verbose=False, 
@@ -192,8 +205,6 @@ def delete_datasets(windlab_yaml,
 
     Parameters
     ----------
-    windlab_yaml : dict 
-        Content of the entire yaml file.
     ckan_url : String
         URL of WindLab or other CKAn installation
     api_token : String
@@ -287,12 +298,11 @@ def search_datasets_via_file(yml_dir_file_name=None):
     '''
         
     # get info from setup file
-    windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
+    ckan_url, api_token, windlab_data, verbose, error = \
         CK_helper.read_setup(yml_dir_file_name=yml_dir_file_name, 
                              process_name='search_datasets')
     
-    ret = search_datasets(windlab_yaml=windlab_yaml,
-                          ckan_url=ckan_url,
+    ret = search_datasets(ckan_url=ckan_url,
                           api_token=api_token,
                           windlab_data=windlab_data,
                           verbose=verbose,
@@ -300,8 +310,7 @@ def search_datasets_via_file(yml_dir_file_name=None):
     return ret
 
 
-def search_datasets(windlab_yaml,
-                    ckan_url,
+def search_datasets(ckan_url,
                     api_token,
                     windlab_data,
                     verbose=False,
@@ -312,8 +321,6 @@ def search_datasets(windlab_yaml,
 
     Parameters
     ----------
-    windlab_yaml : dict 
-        Content of the entire yaml file.
     ckan_url : String
         URL of WindLab or other CKAn installation
     api_token : String
@@ -383,7 +390,8 @@ def search_datasets(windlab_yaml,
     return list_of_data_sets
 
 
-def read_datasets_via_file(dir_file_name=None):
+def read_datasets_via_file(access_dir_file_name = 'default.yml',
+                           dir_file_name        = None):
     '''
     Main function to access the WindLAB ckan data based. Can return data or 
     download files from the data base.
@@ -405,13 +413,13 @@ def read_datasets_via_file(dir_file_name=None):
     '''
         
     # get info from setup file
-    windlab_yaml, ckan_url, api_token, windlab_data, verbose, error = \
-        CK_helper.read_yaml(dir_file_name=dir_file_name, 
-                            process_name='read_datasets')
+    ckan_url, api_token, windlab_data, verbose, error = \
+        CK_helper.read_yaml(access_dir_file_name= access_dir_file_name,
+                            dir_file_name       = dir_file_name, 
+                            process_name        = 'read_datasets')
 
     
-    ret = read_datasets(windlab_yaml=windlab_yaml,
-                          ckan_url=ckan_url,
+    ret = read_datasets(ckan_url=ckan_url,
                           api_token=api_token,
                           windlab_data=windlab_data,
                           verbose=verbose,
@@ -419,8 +427,7 @@ def read_datasets_via_file(dir_file_name=None):
     return ret
 
 
-def read_datasets(windlab_yaml,
-                  ckan_url,
+def read_datasets(ckan_url,
                   api_token,
                   windlab_data,
                   verbose=False,
@@ -431,8 +438,6 @@ def read_datasets(windlab_yaml,
 
     Parameters
     ----------
-    windlab_yaml : dict 
-        Content of the entire yaml file.
     ckan_url : String
         URL of WindLab or other CKAn installation
     api_token : String
@@ -666,7 +671,7 @@ if __name__ == '__main__':
         print('')
         # get Organization ID from CKAN data base
         # get info from setup file
-        windlab_yaml, ckan_url, api_token, organization, verbose = \
+        ckan_url, api_token, organization, verbose = \
             CK_helper.read_setup(yml_dir_file_name=dir_name + 'windlab_get_org_id.yml')
         res = CK_helper.get_org_id_from_name(ckan_url, api_token, organization['organization_name'])
     
@@ -677,7 +682,7 @@ if __name__ == '__main__':
         if 1 == 0:
             print('')
             print('')
-            windlab_yaml, ckan_url, api_token, organization, verbose, error = \
+            ckan_url, api_token, organization, verbose, error = \
                 CK_helper.read_setup(yml_dir_file_name=dir_name + 'FlowHub_get_org_id.yml',
                         section_name = 'org')
             res = CK_helper.get_org_id_from_name(ckan_url, api_token, organization['org_disp_name'])
@@ -687,7 +692,7 @@ if __name__ == '__main__':
         if 1 == 0:
             print('')
             print('')
-            windlab_yaml, ckan_url, api_token, cc, verbose, error = \
+            ckan_url, api_token, cc, verbose, error = \
                 CK_helper.read_setup(yml_dir_file_name=dir_name + 'FlowHub_get_cc_id.yml',
                         section_name = 'license')
             res = CK_helper.get_cc_id_from_name(ckan_url, api_token, cc['license_disp_name'])
@@ -775,7 +780,7 @@ if __name__ == '__main__':
 
     # Other help functions
     if 1 == 0:
-        windlab_yaml, ckan_url, api_token, windlab_data, verbose, errorVal = \
+        ckan_url, api_token, windlab_data, verbose, errorVal = \
         CK_helper.read_setup(dir_file_name = 'default.yml')
 
         # Getting list of all organisations

@@ -1,5 +1,5 @@
 API:
     URL: 'https://windlab.hlrs.de'
     token: Null
-    verbose : False
+    verbose : True
     error: True

@@ -5,6 +5,7 @@ import jsonschema
 import json
 from urllib.parse import urljoin
 import xarray as xr
+import re
 
 
 class Loader(yaml.SafeLoader):
@@ -23,6 +24,19 @@ class Loader(yaml.SafeLoader):
             return yaml.load(f, self.__class__)
 
 Loader.add_constructor('!include', Loader.include)
+
+# Add regex matching for scientific notation
+Loader.add_implicit_resolver(
+    u'tag:yaml.org,2002:float',
+    re.compile(u'''^(?:
+     [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+    |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+    |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+    |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+    |[-+]?\\.(?:inf|Inf|INF)
+    |\\.(?:nan|NaN|NAN))$''', re.X),
+    list(u'-+0123456789.'))
+
 
 class XrResourceLoader(Loader):
 
@@ -59,6 +73,29 @@ def load_yaml(filename, loader=XrResourceLoader):
         return yaml.load(fid, loader)
 
 
+def enforce_no_additional_properties(schema):
+    """Recursively set additionalProperties: false for all objects in the schema"""
+    if isinstance(schema, dict):
+        # If this is an object type schema, set additionalProperties: false
+        if schema.get('type') == 'object' or 'properties' in schema:
+            schema['additionalProperties'] = False
+        
+        # Recursively process all nested schemas
+        for key, value in schema.items():
+            if key == 'properties':
+                # Process each property's schema
+                for prop_schema in value.values():
+                    enforce_no_additional_properties(prop_schema)
+            elif key in ['items', 'additionalItems']:
+                # Process array item schemas
+                enforce_no_additional_properties(value)
+            elif key in ['oneOf', 'anyOf', 'allOf']:
+                # Process each subschema in these combining keywords
+                for subschema in value:
+                    enforce_no_additional_properties(subschema)
+    return schema
+
+
 def validate_yaml(data_file, schema_file, loader=XrResourceLoader):
 
     def add_local_schemas_to(resolver, schema_folder, base_uri, schema_ext_lst=['.json', '.yaml', '.yml']):
@@ -92,6 +129,7 @@ def validate_yaml(data_file, schema_file, loader=XrResourceLoader):
 
     data = load_yaml(data_file, loader)
     schema = load_yaml(schema_file)
+    schema = enforce_no_additional_properties(schema)
 
     schema_folder = Path(schema_file).parent
     base_uri = 'https://www.example.com/schemas/'
@@ -100,4 +138,4 @@ def validate_yaml(data_file, schema_file, loader=XrResourceLoader):
     add_local_schemas_to(resolver, schema_folder, base_uri)
     jsonschema.validate(data, schema, resolver=resolver)
 
-    return ("Validation succeeded")
+    print("Validation succeeded")

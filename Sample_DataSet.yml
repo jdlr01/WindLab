@@ -1,0 +1,51 @@
+# General required fields
+general_requ:
+    title: 
+    notes: 
+    subject: 
+    copy_right_license_name: 
+    org_name: 
+    group: 
+    private: 
+    identifier: 
+    version: 
+    author: 
+    maintainer: 
+    maintainer_email: 
+
+# General optional fields
+general_opt:
+    funder: 
+    geographic_location: 
+    related_item: 
+    resource_type: 
+    date: 
+    external_conditions: 
+    schema_compliance: 
+    model_type: 
+
+
+# Optional resource field
+resource_opt:
+    resource_start_date: 
+    resource_end_date: 
+    resource_start_time: 
+    resource_end_time: 
+    temporal_resolution: 
+    temporal_aggregation_method: 
+    spatial_resolution: 
+    spatial_aggregation_method: 
+    data_instruments: 
+    background: 
+    variables: 
+
+
+
+# Resources
+resources:
+    - resource_title: 
+      resource_source: 
+      resource_description: 
+      resource_format: 
+      resource_schema_name: 
+      resource_url: 
