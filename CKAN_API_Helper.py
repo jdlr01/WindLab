@@ -10,40 +10,58 @@ import copy
 import sys
 import zipfile
 from netCDF4 import Dataset
+import pandas as pd
 
  
 from jsonschema import ValidationError
 from yml_utils import validate_yaml
 import yml_utils
-#from windIO.yml_utils import validate_yaml
-#from windIO.yml_utils import validate_yaml
 
-# from yaml import load, dump
-# from jsonschema import validate
-# from yaml import CLoader as Loader, CDumper as Dumper
-#from pathlib import Path
-#from typing import Any
-# from yamlinclude import YamlIncludeConstructor
+def dataset_schema_label():
+    return 'schema_compliance'
 
-data_format_list    = ['txt', 'csv', 'netcdf', 'pdf', 'yaml']
-general_requ_list   = ['title', 'notes', 'subject', 'copy_right_license_name', 
-                     'org_name', 'group', 'private', 'identifier', 'version', 'author', 
-                     'maintainer','maintainer_email']
-general_opt_list    = ['funder', 'geographic_location', 'related_item', 'resource_type', 
-                    'date', 'external_conditions', 'schema_compliance', 'model_type']
-resource_opt_list   = ['resource_start_date', 'resource_end_date', 'resource_start_time', 
-                       'resource_end_time', 'temporal_resolution', 'temporal_aggregation_method', 
-                       'spatial_resolution', 'spatial_aggregation_method', 'data_instruments', 
-                       'background', 'variables']
-resources_list      = ['resource_title', 'resource_description', 'resource_schema_name', 'resource_format', 
-                       'resource_source', 'resource_url']
+def resource_schema_label():
+    return 'framework'
 
-general_requ_list_type  = [str, str, list, str, str, str, bool, str, float, str, str, str]
-general_opt_list_type   = [str, list, str, str, str, list, str, str]
-resource_opt_list_type  = [str, str, int, int, int, str, int, str, list, str, list]
-resources_list_type     = [str, str, str, str, str, str]
+def resource_label():
+    return 'resource'
 
 
+data_format_list        = ['txt', 'csv', 'netcdf', 'pdf', 'yaml']
+
+# Required general parameter
+general_requ_list       = ['title', 'notes', 'license_name', 'owner_org_name', 
+                           'url', 'version', 'author', 'maintainer', 'maintainer_email', 
+                           'subject', 'conditions', 'variable', 'spatial', ]
+general_requ_list_type  = [str,  str, str, str, 
+                           str, str, str, str, str, 
+                           list, list, list, dict]
+
+# Optional general parameter
+general_opt_list        = ['group', 'private', 'funder', 'related_item', 'type',  
+                           'date', dataset_schema_label(), 'model_type', 'resource_start_date', 'resource_end_date', 
+                           'resource_start_time', 'resource_end_time', 'temporal_resolution', 'temporal_aggregation_method', 'spatial_resolution', 
+                           'spatial_aggregation_method', 'data_instruments', 'background', ]
+general_opt_list_type   = [str, bool, str, str, str, 
+                           str, str, str, str, str, 
+                           str, str, float, str, float, 
+                           str, list, str]
+type_dict = {'data-model':'data', 'data-experiment':'data', 'publication':'knowledge', 'process':'application', 'code':'application', 'model-chain':'application', }
+
+# Required resource parameter
+resources_list          = ['url','name', 'description', 'type', resource_schema_label(), 
+                           'format', 'source']
+
+resources_list_type     = [str, str, str, str,  str,
+                           str, str]
+
+
+
+
+def buffer_tabs(level_num):
+    for ii in range(level_num):
+        print("  ", end="")
+    return
 
 def read_resource(ckan,
                   name,
@@ -51,7 +69,8 @@ def read_resource(ckan,
                   write_to_file=False,
                   dir_name='', 
                   error = True,
-                  verbose=False):
+                  verbose=False,
+                  level_num = 0):
     '''
     Actual working horce to get resource from Dataset.  
 
@@ -83,6 +102,12 @@ def read_resource(ckan,
             'name': name of the Dataset
             'data': Either the data of the resource, or the file name with path
     '''
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Started: read_resource()')
+        level_num = level_num + 1
+
     # Retrieve the resource details using resource_show
     try:
         resource = ckan.action.resource_show(id=resource_id)
@@ -96,7 +121,12 @@ def read_resource(ckan,
         # Check if the request was successful
         if respo.status_code != 200:
             if verbose:
+                buffer_tabs(level_num)
                 print(f"Failed to get data from data base. Status code: {respo.status_code}")
+                if verbose:
+                    buffer_tabs(level_num)
+                    print('Exiting: read_resource()')
+
             return []
 
         # make local directory if needed
@@ -132,8 +162,12 @@ def read_resource(ckan,
                 with open(resource_file_name, 'wb') as f:
                     f.write(respo.content)
                 if verbose:
+                    buffer_tabs(level_num)
                     print(f"CSV file saved as {resource_file_name}")
                 data = resource_file_name
+            if verbose:
+                buffer_tabs(level_num)
+                print('Exiting: read_resource()')
             return data
 
         # netCDF files
@@ -159,6 +193,9 @@ def read_resource(ckan,
                 print(data)
                 #data = resource_file_name
 
+            if verbose:
+                buffer_tabs(level_num)
+                print('Exiting: read_resource()')
             return data
 
         # YAML files
@@ -172,34 +209,20 @@ def read_resource(ckan,
                 with open(resource_file_name, 'wb') as f:
                     f.write(respo.content)
                 if verbose:
+                    buffer_tabs(level_num)
                     print(f"YAML file saved as {resource_file_name}")
                 data = resource_file_name
 
             else:
                 # get data as is
-                #data = respo.content.decode("utf-8")
-                #data = yaml.safe_load(data)
                 resource_file_name = resource_file_name.replace('\\', '/')
                 with open(resource_file_name, 'r') as file:
                     windlab_yaml = yaml.safe_load(file)
                 print(data)
 
-                # yaml.safe_load(respo.content)
-
-                # with open(resource_file_name, 'r', encoding="utf8") as file:
-                #    data = yaml.safe_load(file, Loader=loader)
-                #    data = yaml.load(file, Loader=loader)
-
-                # loader = yaml.SafeLoader  # Works with any loader
-                # loader.add_constructor("!include", yaml_include_constructor)
-
-                # data = yaml.load(respo.content, Loader=loader)
-
-                # data_1 = yaml.load(respo.content)
-                # data_1 = yaml.load(data)
-                # data = yaml.safe_load(data)
-                # data = yaml.safe_load(respo.content)
-
+            if verbose:
+                buffer_tabs(level_num)
+                print('Exiting: read_resource()')
             return data
 
         # ZIP files
@@ -214,6 +237,7 @@ def read_resource(ckan,
                 with open(resource_file_name, 'wb') as f:
                     f.write(respo.content)
                 if verbose:
+                    buffer_tabs(level_num)
                     print(f"ZIP file saved as {resource_file_name}")
                 data = resource_file_name
 
@@ -229,11 +253,13 @@ def read_resource(ckan,
                 with open(resource_file_name, 'wb') as f:
                     f.write(respo.content)
                 if verbose:
+                    buffer_tabs(level_num)
                     print(f"CSV file saved as {resource_file_name}")
                 data = resource_file_name
             return data
         else:
             if verbose:
+                buffer_tabs(level_num)
                 print("The resource is not a CSV, netCDF nor YAML file.")
 
     except Exception as e:
@@ -303,94 +329,203 @@ def read_resource(ckan,
 
 #     return org_id
 
+def list_2_string(thisList):
+    """
+    Converting a list of strings into a string, where each list element is separated by a comma
+    
+    """
+
+    if len(thisList) == 0:
+        return ''
+    
+    thisString = str(thisList[0])
+
+    for ii in thisList:
+        thisString = thisString  + ',' + str(ii)
+
+    return thisString
+
+
+
 def check_meta_data(thisdata_in, 
                     verbose = False, 
-                    error = True):
+                    error = True,
+                    level_num = 0):
     
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: check_meta_data()')
+    level_num = level_num + 1
+
     for thisdata in thisdata_in:
         # general_requ
         for ii in range(len(general_requ_list)):
+            if verbose:
+                buffer_tabs(level_num)
+                print('Doing: "', general_requ_list[ii],'"')
             if general_requ_list[ii] in thisdata['general_requ']:
-                if isinstance(thisdata['general_requ'][general_requ_list[ii]], general_requ_list_type[ii]):
-                    pass
+                if thisdata['general_requ'][general_requ_list[ii]] == None:
+                    if general_requ_list_type[ii] == str:
+                        thisdata['general_requ'][general_requ_list[ii]] = ""
+                    elif general_requ_list_type[ii] == float:
+                        thisdata['general_requ'][general_requ_list[ii]] = None
+                    elif general_requ_list_type[ii] == list:
+                        thisdata['general_requ'][general_requ_list[ii]] = []
+                    elif  general_requ_list_type[ii] ==  json:
+                        thisdata['general_requ'][general_requ_list[ii]] = {}
+                    else:
+                        print('ERROR: Part not coded for "',  general_requ_list_type[ii], '"')
+                        sys.exit()
+                elif general_requ_list[ii] == 'version':
+                    thisdata['general_requ'][general_requ_list[ii]] = str(thisdata['general_requ'][general_requ_list[ii]])
+                    if verbose:
+                        buffer_tabs(level_num)
+                        print('passed: general_requ."',general_requ_list[ii],'"')
+                elif isinstance(thisdata['general_requ'][general_requ_list[ii]], general_requ_list_type[ii]):
+                    if general_requ_list_type[ii] == list:
+                        thisdata['general_requ'][general_requ_list[ii]] = list_2_string(thisdata['general_requ'][general_requ_list[ii]])
+                    if verbose:
+                        buffer_tabs(level_num)
+                        print('passed: general_requ."',general_requ_list[ii],'"')
                 else:
-                    print('Error: In general_requ: Type of "' + general_requ_list[ii] + '" not correct. Needs to be ' + str(general_requ_list_type[ii]))
+                    print('ERROR: In general_requ: Type of "' + general_requ_list[ii] + '" not correct. Needs to be ' + str(general_requ_list_type[ii]))
                     sys.exit()
             else:
-                print('Error: In general_requ: No key found for ' + general_requ_list[ii])
+                print('ERROR: In general_requ: No key found for: "' + general_requ_list[ii],'"')
                 sys.exit()
         
         # general_opt
+        # set up thisdata['general_opt'] if not given
         if 'general_opt' not in thisdata:
             thisdata['general_opt'] = {}
             for ii in range(len(general_opt_list)):
                 thisdata['general_opt'][general_opt_list[ii]] = None
+
+        # set up thisdata['general_opt'] if None
         elif thisdata['general_opt'] == None:
             thisdata['general_opt'] = {}
             for ii in range(len(general_opt_list)):
                 thisdata['general_opt'][general_opt_list[ii]] = None
+
+        # check thisdata['general_opt']
         else:
             for ii in range(len(general_opt_list)):
+                if verbose:
+                    buffer_tabs(level_num)
+                    print('Doing: "', general_opt_list[ii],'"')
+
                 if general_opt_list[ii] in thisdata['general_opt']:
-                    if isinstance(thisdata['general_opt'][general_opt_list[ii]], general_opt_list_type[ii]):
-                        pass
+                    # converting geographic_location into spatial
+                    # type
+                    if general_opt_list[ii] == 'type':
+                        if thisdata['general_opt'][general_opt_list[ii]] == None:
+                            pass
+                        else:
+                            temp = thisdata['general_opt'][general_opt_list[ii]]
+                            temp = temp.replace(' ', '').lower()
+                            thisdata['general_opt'][general_opt_list[ii]] = type_dict[temp]
+                        if verbose:
+                            buffer_tabs(level_num+1)
+                            print('passed: general_opt."',general_opt_list[ii],'"')
+                    # resource_start_time
+                    elif general_opt_list[ii] == 'resource_start_time':
+                        if thisdata['general_opt'][general_opt_list[ii]] == None:
+                            pass
+                        else:
+                            thisdata['general_opt'][general_opt_list[ii]] = str(thisdata['general_opt'][general_opt_list[ii]])
+                        if verbose:
+                            buffer_tabs(level_num+1)
+                            print('passed: general_opt."',general_opt_list[ii],'"')
+                    # resource_end_time
+                    elif general_opt_list[ii] == 'resource_end_time':
+                        if thisdata['general_opt'][general_opt_list[ii]] == None:
+                            pass
+                        else:
+                            thisdata['general_opt'][general_opt_list[ii]] = str(thisdata['general_opt'][general_opt_list[ii]])
+                        if verbose:
+                            buffer_tabs(level_num+1)
+                            print('passed: general_opt."',general_opt_list[ii],'"')
+                    # temporal_resolution
+                    elif general_opt_list[ii] == 'temporal_resolution':
+                        if thisdata['general_opt'][general_opt_list[ii]] == None:
+                            pass
+                        else:
+                            thisdata['general_opt'][general_opt_list[ii]] = str(thisdata['general_opt'][general_opt_list[ii]])
+                        if verbose:
+                            buffer_tabs(level_num+1)
+                            print('passed: general_opt."',general_opt_list[ii],'"')
+                    # spatial_resolution
+                    elif general_opt_list[ii] == 'spatial_resolution':
+                        if thisdata['general_opt'][general_opt_list[ii]] == None:
+                            pass
+                        else:
+                            thisdata['general_opt'][general_opt_list[ii]] = str(thisdata['general_opt'][general_opt_list[ii]])
+                        if verbose:
+                            buffer_tabs(level_num+1)
+                            print('passed: general_opt."',general_opt_list[ii],'"')
+                    elif isinstance(thisdata['general_opt'][general_opt_list[ii]], general_opt_list_type[ii]):
+                        if general_opt_list_type[ii] == list:
+                            thisdata['general_opt'][general_opt_list[ii]] = list_2_string(thisdata['general_opt'][general_opt_list[ii]])
+                        elif general_opt_list_type[ii] == complex:
+                            thisdata['general_opt'][general_opt_list[ii]] = {"type": "Point", "coordinates":thisdata['general_opt'][general_opt_list[ii]]}
+                        
                     elif thisdata['general_opt'][general_opt_list[ii]] == None:
                         pass
                     else:
-                        print('Error: In general_opt: Type of ' + general_opt_list[ii] + ' not correct. Needs to be ' + str(general_opt_list_type[ii]))
+                        print('ERROR: In general_opt: Type of "' + general_opt_list[ii] + '" not correct. Needs to be ' + str(general_opt_list_type[ii]))
                         sys.exit()
+                # Generate if not given
                 else:
                     thisdata['general_opt'][general_opt_list[ii]] = None
 
-        # resource_opt
-        if 'resource_opt' not in thisdata:
-            thisdata['resource_opt'] = {}
-            for ii in range(len(resource_opt_list)):
-                thisdata['resource_opt'][resource_opt_list[ii]] = None
-        elif thisdata['resource_opt'] == None:
-            thisdata['resource_opt'] = {}
-            for ii in range(len(resource_opt_list)):
-                thisdata['resource_opt'][resource_opt_list[ii]] = None
-        else:
-            for ii in range(len(resource_opt_list)):
-                if resource_opt_list[ii] in thisdata['resource_opt']:
-                    if isinstance(thisdata['resource_opt'][resource_opt_list[ii]], resource_opt_list_type[ii]):
-                        pass
-                    elif thisdata['resource_opt'][resource_opt_list[ii]] == None:
-                        pass
-                    else:
-                        print('Error: In resource_opt: Type of ' + resource_opt_list[ii] + ' not correct. Needs to be ' + str(resource_opt_list_type[ii]))
-                        sys.exit()
-                else:
-                    thisdata['resource_opt'][resource_opt_list[ii]] = None
-
         # resources
-        if 'resources' not in thisdata:
-            thisdata['resources'] = []
-        elif thisdata['resources'] == None:
-            thisdata['resources'] = []
+        if resource_label() not in thisdata:
+            thisdata[resource_label()] = []
+        elif thisdata[resource_label()] == None:
+            thisdata[resource_label()] = []
         else:
-            for theEntry in thisdata['resources']:
+            for thisResource in thisdata[resource_label()]:
                 for ii in range(len(resources_list)):
-                    if resources_list[ii] in theEntry:
-                        if isinstance(theEntry[resources_list[ii]], resources_list_type[ii]):
-                            if os.path.isfile(theEntry['resource_source']):
-                                if verbose: print('Resource "', theEntry['resource_source'] ,'" exists. Pass.')
-                                pass
-                            else:
-                                print('Resource "', theEntry['resource_source'], '" could not be found.')
-                                sys.exit
+                    if resources_list[ii] in thisResource:
+                        if isinstance(thisResource[resources_list[ii]], resources_list_type[ii]):
 
-                        elif theEntry[resources_list[ii]] == None:
+                            if resources_list[ii] == 'source':
+                                if os.path.isfile(thisResource['source']):
+                                    if verbose: 
+                                        buffer_tabs(level_num)
+                                        print('Resource "', thisResource['source'] ,'" exists. Pass.')
+                                else:
+                                    print('Resource "', thisResource['source'], '" could not be found.')
+                                    sys.exit()
+
+                            elif resources_list[ii] in thisdata['general_opt']:
+                                # converting geographic_location into spatial
+                                if general_opt_list[ii] == 'type':
+                                    if thisdata['general_opt'][general_opt_list[ii]] == None:
+                                        pass
+                                    else:
+                                        temp = thisdata['general_opt'][general_opt_list[ii]]
+                                        temp = temp.replace(' ', '').lower()
+                                        thisdata['general_opt'][general_opt_list[ii]] = type_dict[temp]
+
+                            if verbose:
+                                buffer_tabs(level_num)
+                                print('passed: ',resource_label(),'."',general_opt_list[ii],'"')
+
+                        elif thisResource[resources_list[ii]] == None:
                             pass
                         else:
-                            theEntry[resources_list[ii]] = None
-                            #print('Error: In resource: Type of ' + resources_list[ii] + ' not correct. Needs to be ' + str(resources_list_type[ii]))
-                            #sys.exit()
+                            thisResource[resources_list[ii]] = None
                     else:
-                        theEntry[resources_list[ii]] = None
+                        thisResource[resources_list[ii]] = None
 
-    if verbose: print('Setup File Test Passed.')
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Setup File Test Passed.')
+    if verbose:
+        buffer_tabs(level_num-1)
+        print('Exiting: check_meta_data()')
     return thisdata_in
 
 
@@ -399,7 +534,8 @@ def setup_dataset(ckan_url,
                   org_id, 
                   thisdata, 
                   verbose = False, 
-                  error = True):
+                  error = True,
+                  level_num = 0):
     """
     Sets up a data set in the WindLab, using DataCite meta data.
     
@@ -420,10 +556,15 @@ def setup_dataset(ckan_url,
     String
         Data set ID.
     """
+    level_num       = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: setup_dataset()')
+    level_num = level_num + 1
+
     general_requ    = thisdata['general_requ']
-    resources       = thisdata['resources']
     general_opt     = thisdata['general_opt']
-    resource_opt    = thisdata['resource_opt']
+    resources       = thisdata[resource_label()]
 
     # Check if data set name in use, otherwise find new one
     count = 0
@@ -435,7 +576,8 @@ def setup_dataset(ckan_url,
                              api_token, 
                              name, 
                              verbose = verbose, 
-                             error = error)
+                             error = error,
+                             level_num = level_num)
         if ret == False:
             break
         else:
@@ -460,11 +602,6 @@ def setup_dataset(ckan_url,
         if key in general_opt:
             data[key] = general_opt[key]
 
-    # resource_opt
-    for key in resource_opt_list:
-        if key in resource_opt:
-            data[key] = resource_opt[key]
-
     # resources_list
     for key in resources_list:
         if key in resources:
@@ -480,9 +617,16 @@ def setup_dataset(ckan_url,
         else:
             print(f"Failed to create dataset. Status Code: {response.status_code}")
             print("Error:", response.json())
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: setup_dataset()')
         return []
     else:
         dataset_id = response.json()['result']['id']
+
+    if verbose:
+        buffer_tabs(level_num-1)
+        print('Exiting: setup_dataset()')
 
     return dataset_id
 
@@ -491,7 +635,8 @@ def is_name_in_use(ckan_url,
                    api_token, 
                    dataset_name,
                    verbose = False,
-                   error = True):
+                   error = True,
+                   level_num = 0):
     """
     Checks if name already given in WindLab
 
@@ -513,7 +658,12 @@ def is_name_in_use(ckan_url,
         True if name in WindLab.
         None, if error in WindLab querry
     """
-    
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: is_name_in_use()')
+    level_num = level_num + 1
+
     # Connect to the CKAN instance
     ckan = RemoteCKAN(ckan_url)
 
@@ -521,18 +671,125 @@ def is_name_in_use(ckan_url,
     try:
         ret = ckan.action.package_show(id=dataset_name)
         if ret == None:
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: is_name_in_use()')
             return False
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: is_name_in_use()')
         return True
     except:
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: is_name_in_use()')
         return False
     
+
+
+def setup_meta_dict(verbose = False,
+                    level_num = 0):
+    """
+    Generates a default metadata dict.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    dict
+    
+    """
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: setup_meta_dict()')
+    level_num = level_num + 1
+
+    windlab_data = {}
+    windlab_data['general_requ_list'] = {}
+    windlab_data['general_opt_list'] = {}
+    windlab_data['resource_opt_list'] = {}
+    if verbose:
+        buffer_tabs(level_num-1)
+        print('Exiting: setup_meta_dict()')
+    return windlab_data
+
+
+
+def get_from_xls(file_name, 
+                 verbose = False, 
+                 error = False, 
+                 level_num = 0):
+    """
+    Returns metadata from excel book.
+
+
+    """
+    level_num    = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: get_from_xls()')
+    level_num = level_num + 1
+        
+    windlab_data = setup_meta_dict(verbose = verbose,
+                                   level_num = level_num)
+    if os.path.exists(file_name):
+        # Reading the excel table.
+        excel_data_df = pd.read_excel(file_name, sheet_name='Tabelle1', 
+                  index_col=None,
+                  dtype={'Name': str, 'Your input below': str})
+        
+        # Setting a few variables
+        keys = excel_data_df['Name'].tolist()
+        values = excel_data_df['Your input below'].tolist()
+        num_resource_title = keys.count('resource_title')
+
+        # Setting up the resources
+        if num_resource_title > 0:
+            windlab_data['resources'] = []
+
+        # going through each key except resources
+        for key, val in zip(keys, values):
+            if key in general_requ_list:
+                windlab_data['general_requ_list'][key] = val
+            elif key in general_opt_list:
+                windlab_data['general_opt_list'][key] = val
+
+        # getting all the differen resources
+        for ii in range(num_resource_title):
+            windlab_data['resources'].append({})
+            for key in resources_list:
+                # finding where key in list of keys
+                pos = keys.index(key)
+                # Grabbing the value
+                windlab_data['general_requ_list'][key] = values[pos]
+                # removing key and value from list
+                keys.pop(pos)
+                values.pop(pos)
+
+    # Any non-coded stuff
+    else:
+        print('Error: get_from_xls(): Not able to find file "', file_name, '"')
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: get_from_xls()')
+        return {}
+
+    if verbose:
+        buffer_tabs(level_num-1)
+        print('Exiting: get_from_xls()')
+    return windlab_data
+
+
 
 def read_yaml(access_dir_file_name  = 'default.yml',
                 dir_file_name       = None, 
                 section_name        = 'data', 
                 process_name        = '',
                 verbose             = False,
-                error               = True):
+                error               = True,
+                level_num           = 0):
     """
     Reads in the required meta data through a yaml file, 
     and returns the information as a dict.
@@ -568,93 +825,125 @@ def read_yaml(access_dir_file_name  = 'default.yml',
         Boolean to write further information to screen
     """
 
-    
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: read_yaml()')
+    level_num = level_num + 1
+
     # Getting some default information for WindLab
     ckan_url, api_token, verbose, errorVal = \
-    read_access(dir_file_name = access_dir_file_name, 
-                verbose = verbose,
-                error = error)
+    read_access(dir_file_name   = access_dir_file_name, 
+                verbose         = verbose,
+                error           = error,
+                level_num       = level_num)
     
     with open(dir_file_name, 'r') as file:
         windlab_data = yaml.safe_load(file)
 
     if 'file' in windlab_data['data']:
         windlab_temp = []
+        rel_data_dir_name = ''
+        if 'rel_data_dir_name' in windlab_data['data']:
+            rel_data_dir_name = windlab_data['data']['rel_data_dir_name']
+
         for file_name in windlab_data['data']['file']: 
-            if file_name[-4:] == '.zip':
+            # zip file
+            if file_name[-4:].lower() == '.zip':
                 windlab_temp.append([get_meta_from_zip(file_name)])
-            else:
+            
+            # yaml files
+            elif (file_name[-4:].lower() == '.yml') or (file_name[-5:].lower() == '.yaml'):
                 with open(file_name, 'r') as file:
                     windlab_temp.append([yaml.safe_load(file)])
+            
+            # Excel tables
+            elif (file_name[-4:].lower() == '.xls') or (file_name[-5:].lower() == '.xlsm'):
+                windlab_temp.append(get_from_xls(file_name))
+
+            else:
+                print('ERROR: read_yaml(): This type of file not coded.')
+                sys.exit
 
         windlab_data = windlab_temp[0]
 
+    if verbose:
+        buffer_tabs(level_num-1)
+        print('Exiting: read_yaml()')
+
     return ckan_url, api_token, windlab_data, verbose, errorVal
 
 
-def read_json(access_dir_file_name = 'default.yml',
-                dir_file_name       = None, 
-                section_name        = 'data', 
-                process_name        = '',
-                verbose             = False,
-                error               = True):
-    
-    """
-    Reads in the required meta data through a json file, 
-    and returns the information as a dict.
-
-    Parameters
-    ----------
-    access_dir_file_name : String, optional
-        Dir and file name of the yaml file containing URL, access-token, and other settings.
-    dir_file_name : String, optional
-        File and path name of the yaml file. Abs path name needed. 
-        The default is None.
-    section_name : string, default 'data' 
-        Reads in the information from section section_name
-    process_name : String, optional
-        Name of the proces, that was trying to read the yaml file. 
-        The default is ''.
-    verbose : Boolean, default False
-        Boolean for display of messages to screen
-    error : Boolean, default False
-        Boolean for displaying caught error messages
-
-    Returns
-    -------
-    ckan_url: String
-        containing the URL of the WindLab
-    api_token : String
-        Containing the access key if given
-    windlab_data
-        Content of the yaml file.
-    verbose : boolean
-        Boolean to throw errors or not
-    errorVal : boolean
-        Boolean to write further information to screen
-    """
+#def read_json(access_dir_file_name = 'default.yml',
+#                dir_file_name       = None, 
+#                section_name        = 'data', 
+#                process_name        = '',
+#                verbose             = False,
+#                error               = True):
+#    
+#    """
+#    Reads in the required meta data through a json file, 
+#    and returns the information as a dict.#
+#
+#    Parameters
+#    ----------
+#    access_dir_file_name : String, optional
+#        Dir and file name of the yaml file containing URL, access-token, and other settings.
+#    dir_file_name : String, optional
+#        File and path name of the yaml file. Abs path name needed. 
+#        The default is None.
+#    section_name : string, default 'data' 
+#        Reads in the information from section section_name
+#    process_name : String, optional
+#        Name of the proces, that was trying to read the yaml file. 
+#        The default is ''.
+#    verbose : Boolean, default False
+#        Boolean for display of messages to screen
+#    error : Boolean, default False
+#        Boolean for displaying caught error messages
+#
+#    Returns
+#    -------
+#    ckan_url: String
+#        containing the URL of the WindLab
+#    api_token : String
+#        Containing the access key if given
+#    windlab_data
+#        Content of the yaml file.
+#    verbose : boolean
+#        Boolean to throw errors or not
+#    errorVal : boolean
+#        Boolean to write further information to screen
+#   """
 
     # Getting some default information for WindLab
-    ckan_url, api_token, verbose, errorVal = \
-    read_access(dir_file_name = access_dir_file_name, 
-                verbose = verbose,
-                error = error)
+#    ckan_url, api_token, verbose, errorVal = \
+#    read_access(dir_file_name = access_dir_file_name, 
+#                verbose = verbose,
+#                error = error)
     
-    with open(dir_file_name, 'r') as file:
-        windlab_data = json.safe_load(file)
-    
-    return ckan_url, api_token, windlab_data, verbose, errorVal
+#    with open(dir_file_name, 'r') as file:
+#        windlab_data = json.safe_load(file)
+#    
+#    return ckan_url, api_token, windlab_data, verbose, errorVal
 
     
 
 def get_meta_from_zip(dir_file_name = None, 
                       verbose       = False, 
-                      error         = True):
+                      error         = True,
+                      level_num     = 0):
     """
     Returns meta data from zip file. 
     REQUIREMENT: Meta data file name needs to have name of "WindLab_meta.yaml".
 
     """
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: get_meta_from_zip()')
+        level_num = level_num + 1
+
     windlab_data = None
     if os.path.isfile(dir_file_name):
         archive = zipfile.ZipFile(dir_file_name, 'r')
@@ -663,114 +952,22 @@ def get_meta_from_zip(dir_file_name = None,
         windlab_data = archive.read(dir_name + '/WindLab_meta.yaml')
         windlab_data = yaml.safe_load(windlab_data)
 
-        print(windlab_data)
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print(windlab_data)
     else:
         if error: print('ERROR: get_meta_from_zip(): zip file not found.')
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: get_meta_from_zip()')
         return None
 
+    if verbose:
+        buffer_tabs(level_num-1)
+        print('Exiting: get_meta_from_zip()')
     return windlab_data
 
 
-def read_txt(access_dir_file_name   = 'default.yml',
-                dir_file_name       = None, 
-                section_name        = 'data', 
-                process_name        = '',
-                verbose             = False,
-                error               = True):
-    """
-    Reads in the ReadMe.md file, and generates the required dics instead of a yaml file.
-
-    Parameters
-    ----------
-    access_dir_file_name : String, optional
-        Dir and file name of the yaml file containing URL, access-token, and other settings.
-    dir_file_name : String, optional
-        File and path name of the yaml file. Abs path name needed. 
-        The default is None.
-    process_name : String, optional
-        Name of the proces, that was trying to read the yaml file. 
-        The default is ''.
-    verbose : Boolean, default False
-        Boolean for display of messages to screen
-    error : Boolean, default False
-        Boolean for displaying caught error messages
-
-    Returns
-    -------
-    ckan_url: String
-        containing the URL of the WindLab
-    api_token : String
-        Containing the access key if given
-    windlab_data
-        Content of the yaml file.
-    verbose : boolean
-        Boolean to throw errors or not
-    errorVal : boolean
-        Boolean to write further information to screen
-    """
-    try:
-        # Getting some default information for WindLab
-        ckan_url, api_token, verbose, errorVal = \
-        read_access(dir_file_name = access_dir_file_name, 
-                    verbose = verbose,
-                    error = error)
-        
-        windlab_data = {}
-        # Reading the ReadMe.md file
-        f = open(dir_file_name, "r")
-        text_cont = f.read()
-        f.close()
-        ## required meta data
-        windlab_data['title']                   = get_line(text_cont, '- **title**:')
-        windlab_data['description']             = get_line(text_cont, '- **description**:')
-        windlab_data['subject']                 = get_line(text_cont, '- **subject**:')
-        windlab_data['copy_right_license_name'] = get_line(text_cont, '- **copy right license name**:')
-        windlab_data['org_name']                = get_line(text_cont, '- **org name:')
-        windlab_data['group']                   = get_line(text_cont, '- **group**:')
-        windlab_data['private']                 = get_line(text_cont, '- **private**:')
-        windlab_data['identifier']              = get_line(text_cont, '- **identifier**:')
-        windlab_data['version']                 = get_line(text_cont, '- **version**:')
-        windlab_data['author']                  = get_line(text_cont, '- **author**:')
-        windlab_data['maintainer']              = get_line(text_cont, '- **maintainer**:')
-        windlab_data['maintainer_email']        = get_line(text_cont, '- **maintainer email**:')
-
-        ## optional meta data
-        windlab_data['funder']                  = get_line(text_cont, '- **funder**:')
-        windlab_data['geographic_location']     = get_line(text_cont, '- **geographic location**:')
-        windlab_data['related_item']            = get_line(text_cont, '- **related item**:')
-        windlab_data['resource_type']           = get_line(text_cont, '- **resource type**:')
-        windlab_data['date']                    = get_line(text_cont, '- **date**:')
-        windlab_data['external_conditions']     = get_line(text_cont, '- **external conditions**:')
-        windlab_data['tags']                    = get_line(text_cont, '- **tags**:')
-        windlab_data['schema_compliance']       = get_line(text_cont, '- **schema compliance**:')
-        windlab_data['model_type']              = get_line(text_cont, '- **model type**:')
-
-        ## General resource set information
-        windlab_data['resource_start_date']         = get_line(text_cont, '- **resource start date**:')
-        windlab_data['resource_end_date']           = get_line(text_cont, '- **resource end date**:')
-        windlab_data['resource_start_time']         = get_line(text_cont, '- **resource start time**:')
-        windlab_data['resource_end_time']           = get_line(text_cont, '- **resource end time**:')
-        windlab_data['temporal_resolution']         = get_line(text_cont, '- **temporal resolution**:')
-        windlab_data['temporal_aggregation_method'] = get_line(text_cont, '- **temporal aggregation method**:')
-        windlab_data['spatial_resolution']          = get_line(text_cont, '- **funspatial resolutionder**:')
-        windlab_data['spatial_aggregation_method']  = get_line(text_cont, '- **spatial aggregation method**:')
-        windlab_data['data_instruments']            = get_line(text_cont, '- **data instruments**:')
-        windlab_data['background']                  = get_line(text_cont, '- **background**:')
-        windlab_data['variables']                   = get_line(text_cont, '- **variables**:')
-
-        windlab_data['resource_title']              = get_line(text_cont, '- **resource title**:')
-        windlab_data['resource_description']        = get_line(text_cont, '- **resource description**:')
-        windlab_data['resource_schema_name']        = get_line(text_cont, '- **resource schema name**:')
-
-        return ckan_url, api_token, windlab_data, verbose, errorVal
-    
-    except Exception  as err:
-        if error:
-            raise ValueError('ERROR: read_setup: with error message:', err)
-        else:
-            if verbose:
-                print('ERROR: read_setup: Not able to read setup file')
-            return None
 
 
 def get_line():
@@ -780,7 +977,8 @@ def get_line():
 
 def read_access(dir_file_name=None, 
                verbose = False,
-               error = True):
+               error = True, 
+               level_num = 0):
     """
     Reads in the  file containing access to the WindLab
 
@@ -800,10 +998,19 @@ def read_access(dir_file_name=None,
 
     """
     process_name = 'read_access'
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: read_access()')
+    level_num = level_num + 1
+
     try:
         # Check, that yml file supplied
         if dir_file_name is None:
             print('Trying to ', process_name, ' data, but no setup file given.')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: read_access()')
             return False
         
         # Reading yml file, and getting URL and API token 
@@ -812,6 +1019,9 @@ def read_access(dir_file_name=None,
 
         if ('URL' not in windlab_yaml['API']) or ('token' not in windlab_yaml['API']) or ('verbose' not in windlab_yaml['API']) or ('error' not in windlab_yaml['API']):
             print('ERROR Reading set up file. File content API not up to date.')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: read_access()')
             return None
         
         ckan_url = windlab_yaml['API']['URL']
@@ -819,6 +1029,9 @@ def read_access(dir_file_name=None,
         verbose = windlab_yaml['API']['verbose']
         errorVal = windlab_yaml['API']['error']
         
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: read_access()')
         return ckan_url, api_token, verbose, errorVal
     except Exception  as err:
         if error:
@@ -826,6 +1039,9 @@ def read_access(dir_file_name=None,
         else:
             if verbose:
                 print('ERROR: read_access: Not able to read setup file')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: read_access()')
             return None
 
 
@@ -833,7 +1049,8 @@ def read_setup(dir_file_name= None,
                section_name = 'data', 
                process_name = '',
                verbose      = False,
-               error        = True):
+               error        = True,
+               level_num    = 0):
     """
     Reads in the yaml setup file
 
@@ -852,10 +1069,19 @@ def read_setup(dir_file_name= None,
         Content of the yaml file.
 
     """
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: read_setup()')
+    level_num = level_num + 1
+
     try:
         # Check, that yml file supplied
         if dir_file_name is None:
             print('Trying to ', process_name, ' data, but no setup file given.')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: read_setup()')
             return False
         
         # Reading yml file, and getting URL and API token 
@@ -864,6 +1090,9 @@ def read_setup(dir_file_name= None,
 
         if ('URL' not in windlab_yaml['API']) or ('token' not in windlab_yaml['API']) or ('verbose' not in windlab_yaml['API']) or ('error' not in windlab_yaml['API']):
             print('ERROR Reading set up file. File content API not up to date.')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: read_setup()')
             return None
         
         ckan_url = windlab_yaml['API']['URL']
@@ -881,19 +1110,33 @@ def read_setup(dir_file_name= None,
                     windlab_data = windlab_yaml[section_name]
             
         
+        if verbose:
+            buffer_tabs(level_num-1)
+            print('Exiting: read_setup()')
         return ckan_url, api_token, windlab_data, verbose, errorVal
     except Exception  as err:
         if error:
             raise ValueError('ERROR: read_setup: with error message:', err)
         else:
             if verbose:
+                buffer_tabs(level_num)
                 print('ERROR: read_setup: Not able to read setup file')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: read_setup()')
             return None
 
 
 def print_all_org_names(ckan_url, 
-                         api_token):
+                         api_token,
+                         level_num = 0):
     
+    level_num = level_num + 1
+    if verbose:
+        buffer_tabs(level_num)
+        print('Starting: print_all_org_names()')
+        level_num = level_num + 1
+
     # Connect to the CKAN instance
     ckan = RemoteCKAN(ckan_url)
     
@@ -904,10 +1147,17 @@ def print_all_org_names(ckan_url,
     except:
         
         if error:
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: print_all_org_names()')
             raise ValueError('No org_id')
         else:
             if verbose: 
+                buffer_tabs(level_num)
                 print('ERROR: print_all_org_names(): Not able to get list of all organizations from WindLab')
+            if verbose:
+                buffer_tabs(level_num-1)
+                print('Exiting: print_all_org_names()')
             org_id = None
             return org_id
         
@@ -915,11 +1165,13 @@ def print_all_org_names(ckan_url,
     for org in entries_list :
         print(org['display_name'].lower())
 
+
 def get_org_id_from_name(ckan_url, 
                          api_token, 
                          org_disp_name, 
                          verbose = False,
-                         error=True):
+                         error=True,
+                         level_num = 0):
     """
     Returns the ID of an organisation, that is associated with a data set.
 
@@ -942,7 +1194,11 @@ def get_org_id_from_name(ckan_url,
         string containing the ID of the organization.
 
     """
-    if verbose: print('    Entered "get_org_id_from_name"')
+    level_num = level_num + 1
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Starting: "get_org_id_from_name"')
+        level_num = level_num + 1
 
     org_id = None
     # Connect to the CKAN instance
@@ -959,6 +1215,9 @@ def get_org_id_from_name(ckan_url,
         else:
             if verbose: 
                 print('ERROR: get_org_id_from_name(): Not able to get list of all organizations from WindLab')
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_org_id_from_name"')
             org_id = None
             return org_id
 
@@ -968,11 +1227,16 @@ def get_org_id_from_name(ckan_url,
             this_org_id = org['id']
             if this_name == org_disp_name.lower():
                 org_id = this_org_id
-                if verbose: print('    Finished "get_org_id_from_name"')
+                if verbose: 
+                    buffer_tabs(level_num-1)
+                    print('Exiting "get_org_id_from_name"')
 
                 return org_id
     except:
         if error:
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_org_id_from_name"')
             raise ValueError('Not able to get ord_id')
         else:
             if verbose:
@@ -980,21 +1244,26 @@ def get_org_id_from_name(ckan_url,
 
     Error_Mess = 'Not ord_id found for organization : '+ org_disp_name.lower()
     if verbose:
+        buffer_tabs(level_num)
         print('+++++++')
+        buffer_tabs(level_num)
         print('Options are:')
         for org in entries_list :
+            buffer_tabs(level_num)
             print(org['display_name'].lower())
 
+    if verbose: 
+        buffer_tabs(level_num-1)
+        print('Exiting "get_org_id_from_name"')
     raise ValueError(Error_Mess)
-    if verbose: print('    Finished "get_org_id_from_name"')
-    return org_id
         
 
 def get_cc_id_from_name(ckan_url, 
                         api_token, 
                         cc_disp_name, 
                         verbose = False,
-                        error = True):
+                        error = True,
+                        level_num = 0):
     """
     Returns the ID of the copy right, by supplying the name
     
@@ -1017,6 +1286,11 @@ def get_cc_id_from_name(ckan_url,
         string containing the ID of the organization.
 
     """
+    level_num = level_num + 1
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Starting "get_cc_id_from_name"')
+        level_num = level_num + 1
     
     cc_id = None
     
@@ -1028,11 +1302,17 @@ def get_cc_id_from_name(ckan_url,
         licenses = ckan.action.license_list()
     except:
         if error:
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_cc_id_from_name"')
             raise ValueError('No license_id')
         else:
             if verbose: 
                 print('ERROR: get_cc_id_from_name(): No license_id')
             cc_id = None
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting: "get_cc_id_from_name"')
             return cc_id
             
     try:
@@ -1042,28 +1322,47 @@ def get_cc_id_from_name(ckan_url,
             id = license['id']
             # Check if the dataset has the copyright field
             if title == cc_disp_name:
+                if verbose: 
+                    buffer_tabs(level_num-1)
+                    print('Exiting: "get_cc_id_from_name"')
                 return id
             
-        print('')
         print('ERRORT: get_cc_id_from_name: License Disp Name did not exist. Options are:')
         for license in licenses:
             title = license['title']
             print(title)
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print('Exiting "get_cc_id_from_name"')
         return None
 
     except:
         if error:
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_cc_id_from_name"')
             raise ValueError('No license ID')
         else:
             if verbose:
                 print('ERROR: get_cc_id_from_name(): Not able to find CopyRight in WindLab')
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_cc_id_from_name"')
             return cc_id
 
 
 def get_dataset_all_id(ckan_url, 
-                   api_token, 
+                   api_token = None, 
                    verbose = False,
-                   error = True):
+                   error = True,
+                   level_num = 0):
+
+    level_num = level_num + 1
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Starting "get_dataset_all_id()"')
+        level_num = level_num + 1
+
     # Initialize the CKAN API client
     ckan = RemoteCKAN(ckan_url, apikey=api_token)
 
@@ -1088,13 +1387,18 @@ def get_dataset_all_id(ckan_url,
         # Update the start value for the next page
         start += rows
 
+    if verbose: 
+        buffer_tabs(level_num-1)
+        print('Exiting "get_dataset_all_id()"')
     return dataset_ids, dataset_title
         
+
 def get_dataset_id(ckan_url, 
                    api_token, 
                    dataset_names = '*', 
                    verbose = False,
-                   error = True):
+                   error = True,
+                   level_num = 0):
     """
     Gets the dataset_id from dataset_name
     
@@ -1117,6 +1421,12 @@ def get_dataset_id(ckan_url,
         Unique dataset ID of for the unique dataset name.
 
     """
+    level_num = level_num + 1
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Starting "get_dataset_id()"')
+        level_num = level_num + 1
+
     dataset_ids = []
 
     if type(dataset_names) == list:
@@ -1125,8 +1435,12 @@ def get_dataset_id(ckan_url,
                             api_token, 
                             dataset_name, 
                             verbose = verbose,
-                            error = error)
+                            error = error,
+                            level_num = level_num)
             dataset_ids.append(dataset_id)
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print('Exiting "get_dataset_id"')
         return dataset_ids
     # Connect to the CKAN instance
     ckan = RemoteCKAN(ckan_url)
@@ -1134,16 +1448,28 @@ def get_dataset_id(ckan_url,
     # Get the dataset details
     try:
         dataset = ckan.action.package_show(id=dataset_names.lower())
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print('Exiting "get_dataset_id"')
         return dataset['id']
     
     except:
         if error:
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_dataset_id"')
             raise ValueError('Not able to get dataset_id')
         else:
             if verbose:
                 print(f'ERROR: get_dataset_id(): Not able to get dataset_id for dataset with name "{dataset_names}"')
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "get_dataset_id"')
         return None
             
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Exiting "get_dataset_id"')
     return dataset_ids
 
 
@@ -1184,7 +1510,8 @@ def validate_yaml_with_schema(yaml_file_path,
                               resource_schema_type, 
                               resource_schema_name,
                               verbose = False,
-                              error=True):
+                              error=True,
+                              level_num = 0):
     """
     Validate a YAML file against a JSON schema.
 
@@ -1207,23 +1534,28 @@ def validate_yaml_with_schema(yaml_file_path,
         Returns True if schema test past.
 
     """
+
+    level_num = level_num + 1
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Starting "validate_yaml_with_schema"')
+        level_num = level_num + 1
+
     try:
         #2 Loading the yaml data
         if os.path.exists(yaml_file_path):
-            if verbose: print('File "', yaml_file_path, '" found')
+            if verbose: 
+                buffer_tabs(level_num)
+                print('File "', yaml_file_path, '" found')
         else:
-            if verbose: print('File "', yaml_file_path, '" NOT found.')
+            if verbose: 
+                buffer_tabs(level_num)
+                print('File "', yaml_file_path, '" NOT found.')
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "validate_yaml_with_schema"')
             return False
-        if 1 == 0:
-            yaml_data = load_yaml(yaml_file_path)
-            # Validating the yaml data
-            validate_yaml(
-                data_file   = yaml_data, 
-                schema_file = 'schemas/' + resource_schema_type + '/' + resource_schema_name + '.yaml'
-            )
-            return True
         if 1 == 1:
-            
             try:
                 validate_yaml(
                     data_file   = yaml_file_path, 
@@ -1233,22 +1565,32 @@ def validate_yaml_with_schema(yaml_file_path,
                 print('ERROR: File ', yaml_file_path, ' could not be validated.')
                 sys.exit
 
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "validate_yaml_with_schema"')
             return True
 
     
     except:
         if error:
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "validate_yaml_with_schema"')
             raise ValueError('Not able to validate data against scheema')
         else:
             if verbose: 
                 print("ERROR: validate_yaml_with_schema(): Not able to validate data against scheema")
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "validate_yaml_with_schema"')
             return False
         
 
-def check_schema(this_res, 
+def check_against_schema(this_res, 
                  resource_schema_type = None,
                  verbose = False,
-                 error = True):
+                 error = True,
+                 level_num = 0):
     """
     Checks the resource against a schema. If failes, then key 'schema_name' of
     resourcde will be set to None.
@@ -1272,43 +1614,60 @@ def check_schema(this_res,
         to None, if did not carry out a schema test, or failed schema test.
     """
     
+    level_num = level_num + 1
     # Check data schema against data if requested
-    if verbose: print('     Entered "check_schema()"')
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Entered "check_schema()"')
+    level_num = level_num + 1
     try:
         if resource_schema_type is not None:
-            if this_res['resource_format'].lower() in data_format_list:
-                resource_schema_name = this_res['resource_schema_name']
+            if this_res[resource_schema_label()] == None:
+                resource_schema_type = None
+                this_res[resource_schema_label()] = None
+                this_res[dataset_schema_label()] = None
+
+            elif this_res[resource_schema_label()].lower() in data_format_list:
+                resource_schema_name = this_res[resource_schema_label()]
                 if resource_schema_name != None:
-                    ret = validate_yaml_with_schema(yaml_file_path = this_res['resource_source'], 
+                    ret = validate_yaml_with_schema(yaml_file_path = this_res['source'], 
                                                     resource_schema_type = resource_schema_type,
                                                     resource_schema_name = resource_schema_name,
-                                                    verbose = verbose)
+                                                    verbose = verbose,
+                                                    level_num = level_num)
                 else:
                     ret = False
 
                 if ret is False:
                     resource_schema_type = None
-                    this_res['resource_schema_name'] = None
-                    this_res['resource_schema_type'] = None
+                    this_res[resource_schema_label()] = None
+                    this_res[dataset_schema_label()] = None
                 else:
-                    this_res['resource_schema_type'] = resource_schema_type
+                    this_res[dataset_schema_label()] = resource_schema_type
             else:
                 resource_schema_type = None
-                this_res['resource_schema_name'] = None
-                this_res['resource_schema_type'] = None
+                this_res[resource_schema_label()] = None
+                this_res[dataset_schema_label()] = None
         else:
-            this_res['resource_schema_name'] = None
-            this_res['resource_schema_type'] = None
+            this_res[resource_schema_label()] = None
+            this_res[dataset_schema_label()] = None
 
-        
-        if verbose: print('     Finished "check_schema()"')
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print('Exiting "check_schema()"')
         return this_res
     except:
         if error:
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "check_schema()"')
             raise ValueError('Not able to check data against scheema')
         else:
             if verbose:
                 print('ERROR: check_schema(): Not able to check data against scheema')
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "check_schema()"')
             return this_res
 
     
@@ -1317,7 +1676,8 @@ def write_resource(ckan_url,
                   dataset_id,
                   this_res,
                   verbose = False,
-                  error = True):
+                  error = True,
+                  level_num = 0):
     """
     Function to dump data into the CKAN data base, and checks if compliant to 
     a schema if requested by user.
@@ -1349,6 +1709,12 @@ def write_resource(ckan_url,
 
     """
     
+    level_num = level_num + 1
+    if verbose: 
+        buffer_tabs(level_num)
+        print('Starting "write_resource()"')
+    level_num = level_num + 1
+
     # Headers for CKAN API request
     headers = {'Authorization': api_token, 'Content-Type': 'application/json'}
 
@@ -1358,18 +1724,18 @@ def write_resource(ckan_url,
 
     headers = {'Authorization': api_token}
 
-    if this_res['resource_format'].lower() in data_format_list:
+    if this_res['format'].lower() in data_format_list:
         # Resource details
         resource_data = {  # The ID of the dataset you want to add the resource to
             "package_id": dataset_id,  
-            "name":         this_res['resource_title'],
-            "format":       this_res['resource_format'],
-            "description":  this_res['resource_description'],
-            "schema_type":  this_res['resource_schema_type'],
-            "schema_name":  this_res['resource_schema_name'],
+            "name":         this_res['name'],
+            "format":       this_res['format'],
+            "description":  this_res['description'],
+            "schema_type":  this_res[dataset_schema_label()],
+            "schema_name":  this_res[resource_schema_label()],
         }
         # Get link to local data source
-        resource_source = this_res['resource_source']
+        resource_source = this_res['source']
         # Now dump the resource
         try:
             respo = requests.post(resource_create_url,
@@ -1379,21 +1745,24 @@ def write_resource(ckan_url,
             status_code = respo.status_code
             if status_code != 200:
                 print('ERROR: write_resource(): ', respo.json()['error'])
+                if verbose: 
+                    buffer_tabs(level_num-1)
+                    print('Exiting "write_resource()"')
                 return False
         except Exception  as err:
             print(err)
             status_code = 'unknown'
 
-    elif this_res['resource_format'].lower() in ['url','link']:
+    elif this_res['format'].lower() in ['url','link']:
         # Resource details
         resource_data = {  # The ID of the dataset you want to add the resource to
             "package_id":   dataset_id,  
-            "name":         this_res['resource_title'],
-            "format":       this_res['resource_format'],
-            "description":  this_res['resource_description'],
-            "url":          this_res['resource_url'],
-            "schema_type":  this_res['schema_type'],
-            "schema_name":  this_res['resource_schema_name'],
+            "name":         this_res['name'],
+            "format":       this_res['format'],
+            "description":  this_res['description'],
+            "url":          this_res['url'],
+            "schema_type":  this_res[dataset_schema_label()],
+            "schema_name":  this_res[resource_schema_label()],
         }
         # Now dump the resource
         status_code = 'unknown'
@@ -1408,16 +1777,25 @@ def write_resource(ckan_url,
         status_code = 'unknown'
         if verbose:
             print('ERROR: write_resource(): Code not written yet.')
+            if verbose: 
+                buffer_tabs(level_num-1)
+                print('Exiting "write_resource()"')
         return False
 
 
     # Check the response status
     if status_code == 200:
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print('Exiting "write_resource()"')
         return True
     else:
-        print(f"Failed to upload resource. Status Code: {status_code}")
+        print(f"ERROR: Failed to upload resource. Status Code: {status_code}")
         if status_code != 'unknown':
             print("Error:", respo.json())
+        if verbose: 
+            buffer_tabs(level_num-1)
+            print('Exiting "write_resource()"')
         return False
 
 

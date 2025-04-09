@@ -11,9 +11,9 @@ ckan_url, api_token, windlab_data, verbose, errorVal = \
     CK_helper.read_setup(dir_file_name = 'default_token.yml')
 
 get_org_names       = 0
-get_all_ids         = 1
+get_all_ids         = 0
 read_data           = 0
-write_data          = 0
+write_data          = 1
 delete_data         = 0
 delete_data_with_id = 0
 
@@ -121,7 +121,7 @@ if write_data:
         res = CK_Calls.write_datasets_via_file(access_dir_file_name= 'default.yml',
                                             dir_file_name = dir_name + 'Write_DataSet_File_WindIO.yml')
         print(' ')
-
+    
 
 ## Delete Data Set
 if delete_data:

@@ -16,3 +16,4 @@ xarray
 zipfile
 netcdf4
 h5netcdf
+openpyxl

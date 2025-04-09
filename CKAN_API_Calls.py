@@ -2,13 +2,17 @@
 from ckanapi import RemoteCKAN, NotAuthorized, NotFound
 import CKAN_API_Helper as CK_helper
 import yaml  # needs pyyaml
+import sys
 
 
-data_format_list = ['txt', 'csv', 'netcdf']
+
+data_format_list        = ['txt', 'csv', 'netcdf']
+database_format_list    = ['txt', 'csv', 'netcdf', 'yaml']
 
 
 def write_datasets_via_file(access_dir_file_name= 'default.yml', 
-                            dir_file_name       = None):
+                            dir_file_name       = None,
+                            level_num           = 0):
     """
     Function to push data, specified through a yaml file, into a ckan database
     
@@ -24,6 +28,11 @@ def write_datasets_via_file(access_dir_file_name= 'default.yml',
         Boolean if process worked (True) or failed (False)
 
     """
+    level_num = level_num + 1
+    
+    CK_helper.buffer_tabs(level_num)
+    print('Started: write_datasets_via_file()')
+    level_num = level_num + 1
 
     # get info from setup file
     if len(dir_file_name)>4:
@@ -31,27 +40,24 @@ def write_datasets_via_file(access_dir_file_name= 'default.yml',
             ckan_url, api_token, windlab_data, verbose, error = \
                 CK_helper.read_yaml(access_dir_file_name= access_dir_file_name,
                                     dir_file_name       = dir_file_name, 
-                                    process_name        = 'write_datasets')
-            
-        elif dir_file_name[-5:] == '.json':
-            ckan_url, api_token, windlab_data, verbose, error = \
-                CK_helper.read_json(access_dir_file_name= access_dir_file_name,
-                                    dir_file_name       = dir_file_name, 
-                                    process_name        = 'write_datasets')
+                                    process_name        = 'write_datasets',
+                                    verbose             = True,
+                                    error               = True,
+                                    level_num           = level_num)
             
         else:
-            # Get info on WindLap
-            ckan_url, api_token, windlab_data, verbose, error = \
-                CK_helper.read_txt(access_dir_file_name = access_dir_file_name,
-                                   dir_file_name        = dir_file_name, 
-                                    process_name        = 'write_datasets')
+            # not coded
+            print('ERROR: CKAN_API_ Calls(): Code not coded here.')
+            sys.exit
         
         # Checking data data
         windlab_data = CK_helper.check_meta_data(windlab_data, 
                                                 verbose = verbose, 
-                                                error = error)
+                                                error = error,
+                                                level_num = level_num)
             
     else:
+        CK_helper.buffer_tabs(level_num)
         print('ERROR: write_datasets_via_file(): Supplied string of file/dir name not long enough')
         return False
 
@@ -60,15 +66,19 @@ def write_datasets_via_file(access_dir_file_name= 'default.yml',
                             api_token=api_token,
                             windlab_data=windlab_data,
                             verbose=verbose,
-                            error=error)
+                            error=error, 
+                            level_num = level_num)
+    CK_helper.buffer_tabs(level_num)
+    print('Exiting:  write_datasets_via_file()')
     return ret
 
 
 def write_datasets(ckan_url, 
-                   api_token, 
-                   windlab_data, 
-                   verbose=False, 
-                   error=False):
+                   api_token    = None, 
+                   windlab_data = [], 
+                   verbose      = False, 
+                   error        = False,
+                   level_num    = 0):
     """
     Function to push data, specified through a set of variables, into a ckan database
     
@@ -91,7 +101,11 @@ def write_datasets(ckan_url,
         Boolean if process worked (True) or failed (False)
 
     """
-    if verbose: print('    Entered "write_datasets()"')
+    level_num = level_num + 1
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Entered "write_datasets()"')
+    level_num = level_num + 1
     # Dataset metadata to be uploaded to CKAN
     success_list = []
     for thisdata in windlab_data:
@@ -101,25 +115,28 @@ def write_datasets(ckan_url,
         else:
             schema_type = None
 
-        org_disp_name = thisdata['general_requ']['org_name']
+        org_disp_name = thisdata['general_requ']['owner_org_name']
 
         # get owner/organization ID
         org_id = CK_helper.get_org_id_from_name(ckan_url = ckan_url, 
                                                 api_token = api_token, 
                                                 org_disp_name = org_disp_name, 
                                                 verbose = verbose,
-                                                error   = error)
-        # check resources on scheema 
-        if verbose: print('         "check_schema()"')
-
-        for this_res in thisdata['resources']:
-            # Cehcking resource on schema if requested.
-            if verbose: print('++++++++++++++++++')
-            if verbose: print(this_res)
-            this_res = CK_helper.check_schema(this_res              = this_res,
+                                                error   = error,
+                                                level_num = level_num)
+        # check resource on scheema 
+        for this_res in thisdata['resource']:
+            # Checking resource on schema if requested.
+            if verbose: 
+                CK_helper.buffer_tabs(level_num)
+                print('++++++++++++++++++')
+                CK_helper.buffer_tabs(level_num)
+                print(this_res)
+            this_res = CK_helper.check_against_schema(this_res              = this_res,
                                                 resource_schema_type  = schema_type,
                                                 verbose               = verbose,
-                                                error                 = error)
+                                                error                 = error,
+                                                level_num             = level_num)
 
         # Creating a package/entry to ckan 
         dataset_id = CK_helper.setup_dataset(ckan_url   = ckan_url,
@@ -127,36 +144,49 @@ def write_datasets(ckan_url,
                                              org_id     = org_id,
                                              thisdata   = thisdata,
                                              verbose    = verbose,
-                                             error      = error)
+                                             error      = error,
+                                             level_num  = level_num)
         if len(dataset_id) > 0:
             # dumpng the data
-            print('++++++++++++++++++')
-            print('++++++++++++++++++')
-            for this_res in thisdata['resources']:
+            if verbose: 
+                CK_helper.buffer_tabs(level_num)
+                print('++++++++++++++++++')
+                CK_helper.buffer_tabs(level_num)
+                print('++++++++++++++++++')
+            for this_res in thisdata['resource']:
                 # Cehcking resource on schema if requested.
-                this_res = CK_helper.check_schema(this_res=this_res,
+                this_res = CK_helper.check_against_schema(this_res=this_res,
                                                   resource_schema_type=schema_type,
                                                   verbose=verbose,
-                                                  error = error)
+                                                  error = error,
+                                                  level_num = level_num)
                 # Dropping resource
                 res_ret = CK_helper.write_resource(ckan_url,
                                                    api_token,
                                                    dataset_id,
                                                    this_res=this_res,
                                                    verbose=verbose,
-                                                   error=error)
+                                                   error=error,
+                                                   level_num = level_num)
                 success_list.append(res_ret)
 
         pass
 
     if False in success_list:
+        if verbose:
+            CK_helper.buffer_tabs(level_num)
+            print('Exitiung "write_datasets()"')
         return False
     else:
+        if verbose:
+            CK_helper.buffer_tabs(level_num)
+            print('Exitiung "write_datasets()"')
         return True
 
     
 
-def delete_datasets_via_file(dir_file_name=None):
+def delete_datasets_via_file(dir_file_name=None,
+                             level_num = 0):
     """
     Deletes a data sets form the CKAN installation, using the unqiue dataset 
     names. To be deleted dataset need to be supplied through yaml file, which 
@@ -185,12 +215,15 @@ def delete_datasets_via_file(dir_file_name=None):
     #ckan_url, api_token, windlab_data, verbose, error = \
     #    CK_helper.read_setup(dir_file_name=dir_file_name, 
     #                         process_name='delete_dataset')
-    print(windlab_data)
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print(windlab_data)
     ret = delete_datasets(ckan_url=ckan_url, 
                           api_token=api_token, 
                           windlab_data=windlab_data, 
                           verbose=verbose,
-                          error=error)
+                          error=error,
+                          level_num = level_num)
     return ret
 
 
@@ -198,7 +231,8 @@ def delete_datasets(ckan_url,
                     api_token, 
                     windlab_data, 
                     verbose=False, 
-                    error=False):
+                    error=False,
+                    level_num    = 0):
     """
     Deletes a data sets form the CKAN installation, using the unqiue dataset 
     names. To be deleted dataset need to be supplied through a set of variables.
@@ -222,6 +256,10 @@ def delete_datasets(ckan_url,
         DESCRIPTION.
 
     """
+    level_num = level_num + 1
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Started: delete_datasets()')
 
     # Itterating through the data sets to delete
     success_list = []
@@ -235,7 +273,8 @@ def delete_datasets(ckan_url,
                                             api_token, 
                                             dataset_name, 
                                             verbose = verbose,
-                                            error = error)
+                                            error = error, 
+                                            level_num = level_num)
         if len(dataset_ids) >1:
             print('Too many data sets found with same name. Please use data set unique id.')
             dataset_ids = None
@@ -262,6 +301,7 @@ def delete_datasets(ckan_url,
                 ckan.action.package_delete(id=dsi)
                 success_list.append({dataset_name[ii]: True})
             if verbose:
+                CK_helper.buffer_tabs(level_num)
                 print(f' Dataset "{dataset_name[ii]}" was successfuly deleted.')
         except NotAuthorized:
             success_list.append({dataset_name[ii]: False})
@@ -272,6 +312,9 @@ def delete_datasets(ckan_url,
         except Exception as e:
             success_list.append({dataset_name[ii]: False})
             print(f"ERROR: delete_datasets(): An error occurred: {e}")
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Exiting: delete_datasets()')
         
     return success_list
 
@@ -314,7 +357,8 @@ def search_datasets(ckan_url,
                     api_token,
                     windlab_data,
                     verbose=False,
-                    error=False):
+                    error=False,
+                    level_num    = 0):
     '''
     Function to access the WindLAB ckan data base. Returns the DataCite 
     meta data, based on search criterias.
@@ -341,6 +385,10 @@ def search_datasets(ckan_url,
             'name': name of the Dataset
             'data': Either the data of the resource, or the file name with path
     '''
+    level_num = level_num + 1
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Started: search_datasets()')
         
     # Cehck for ckan_url
     if ckan_url is None:
@@ -386,12 +434,16 @@ def search_datasets(ckan_url,
                     if datasets["count"] <= start + rows:
                         break
                     start += rows
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Exiting: search_datasets()')
 
     return list_of_data_sets
 
 
 def read_datasets_via_file(access_dir_file_name = 'default.yml',
-                           dir_file_name        = None):
+                           dir_file_name        = None,
+                           level_num            = 0):
     '''
     Main function to access the WindLAB ckan data based. Can return data or 
     download files from the data base.
@@ -411,19 +463,28 @@ def read_datasets_via_file(access_dir_file_name = 'default.yml',
             'name': name of the Dataset
             'data': Either the data of the resource, or the file name with path
     '''
+    level_num = level_num + 1
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Started: read_datasets_via_file()')
         
     # get info from setup file
     ckan_url, api_token, windlab_data, verbose, error = \
         CK_helper.read_yaml(access_dir_file_name= access_dir_file_name,
                             dir_file_name       = dir_file_name, 
-                            process_name        = 'read_datasets')
+                            process_name        = 'read_datasets',
+                            level_num           = level_num)
 
     
-    ret = read_datasets(ckan_url=ckan_url,
-                          api_token=api_token,
-                          windlab_data=windlab_data,
-                          verbose=verbose,
-                          error=error)
+    ret = read_datasets(ckan_url        = ckan_url,
+                          api_token     = api_token,
+                          windlab_data  = windlab_data,
+                          verbose       = verbose,
+                          error         = error,
+                          level_num     = level_num)
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Exiting: read_datasets_via_file()')
     return ret
 
 
@@ -431,7 +492,8 @@ def read_datasets(ckan_url,
                   api_token,
                   windlab_data,
                   verbose=False,
-                  error=False):
+                  error=False,
+                  level_num    = 0):
     '''
     Main function to access the WindLAB ckan data based. Can return data or 
     download files from the data base.
@@ -458,9 +520,17 @@ def read_datasets(ckan_url,
             'name': name of the Dataset
             'data': Either the data of the resource, or the file name with path
     '''
+    level_num = level_num + 1
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Started: read_datasets()')
+        level_num = level_num + 1
     # Cehck for ckan_url
     if ckan_url is None:
         print('No URL supplied. Program will terminate.')
+        if verbose:
+            CK_helper.buffer_tabs(level_num)
+            print('Exiting: read_datasets()')
         return []
 
     list_of_data_sets = []
@@ -511,6 +581,7 @@ def read_datasets(ckan_url,
             # Check if querry returned entries
             if len(list_of_data_sets) == 0:
                 if verbose:
+                    CK_helper.buffer_tabs(level_num)
                     print('No data set found with tag: ', tag_strings)
     
             # Get list of IDs  
@@ -518,6 +589,7 @@ def read_datasets(ckan_url,
             for dataset in list_of_data_sets:
                 dataset_ids.append(dataset['id'])
                 if verbose:
+                    CK_helper.buffer_tabs(level_num)
                     print(dataset['title'])
     
             # Go through each data set and see if to be selected due to other settings.
@@ -527,8 +599,11 @@ def read_datasets(ckan_url,
                 dataset = ckan.action.package_show(name_or_id=dataset_id)
                 name = dataset['name']
                 if verbose:
+                    CK_helper.buffer_tabs(level_num)
                     print(' ')
+                    CK_helper.buffer_tabs(level_num)
                     print('++++++++++++++++++++++++++++++++++++++++++++++++++')
+                    CK_helper.buffer_tabs(level_num)
                     print('data set name is "', name, '"')
                 if resource_type == 'link':
                     for rr in dataset['resources']:
@@ -537,38 +612,50 @@ def read_datasets(ckan_url,
                             resource_list.append({'name': name, 'resource': {'url' : resources_url}})
                 elif resource_type == 'file':
                     for rr in dataset['resources']:
-                        if rr['url_type'] == 'upload':
+                        if rr['format'].lower() in database_format_list:
                             resource_id = rr['id']
                             resource = CK_helper.read_resource(ckan,
                                                  name = name,
                                                  resource_id = resource_id,
                                                  write_to_file=write_to_file,
-                                                 dir_name = dir_name)
+                                                 dir_name = dir_name,
+                                                 level_num = level_num)
                             resource_list.append({'name': name, 'resource': resource})
                 elif resource_type == None:
                     for rr in dataset['resources']:
-                        if rr['url_type'] == 'upload':
+                        if rr['format'].lower() in database_format_list:
                             if verbose:
+                                CK_helper.buffer_tabs(level_num)
                                 print('Full')
+                                CK_helper.buffer_tabs(level_num)
                                 print(rr['name'])
                             resource_id = rr['id']
                             resource = CK_helper.read_resource(ckan,
                                                  name = name,
                                                  resource_id = resource_id,
-                                                 dir_name = dir_name)
+                                                 dir_name = dir_name,
+                                                 level_num = level_num)
                             resource_list.append({'name': name, 'resource': resource})
                         else:
                             if verbose:
+                                CK_helper.buffer_tabs(level_num)
                                 print('empty')
+                                CK_helper.buffer_tabs(level_num)
                                 print(rr['name'])
                     
                 else:
                     print('requeste resource type not coded: ', resource_type)
+                    if verbose:
+                        CK_helper.buffer_tabs(level_num)
+                        print('Exiting: read_datasets()')
                     return []
         
                 if len(resource_list) > 0:
                     list_of_resources.append(resource_list)
 
+    if verbose:
+        CK_helper.buffer_tabs(level_num)
+        print('Exiting: read_datasets()')
     return list_of_resources
 
 
